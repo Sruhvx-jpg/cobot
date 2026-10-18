@@ -76,6 +76,8 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  apps/agent-house: {}
+
   apps/desktop:
     dependencies:
       '@tauri-apps/api':
@@ -118,6 +120,10 @@ importers:
       vite:
         specifier: ^8.3.4
         version: 8.3.4(@types/node@26.4.1)(esbuild@0.28.2)(jiti@1.21.7)(tsx@4.23.15)(yaml@2.9.1)
+
+  apps/tracer-duty: {}
+
+  packages/adaptor: {}
 
   packages/agent-core:
     dependencies:
