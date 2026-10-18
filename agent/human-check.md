@@ -7,7 +7,7 @@
 ## 1. Mandatory Tool & System Prompt Synchronization
 
 Whenever you create, register, or modify a tool in `@cobot/tools` (or through the MCP adapter):
-**You MUST update the respective system prompt (`packages/tools/src/agent-prompt/base-prompt.ts`) immediately.**
+**You MUST update the respective system prompt (`packages/agent-prompt/src/base-prompt.ts`) immediately.**
 
 ### Why This Rule Exists:
 Without explicit inclusion in the system prompt's `<tools>` and `<rules>` blocks:
@@ -33,7 +33,7 @@ When creating a new tool (e.g. `edit`, `grep`, `find`, or custom microservice to
 
 - [ ] **1. Implementation (`sauce/`)**: Place the core execution logic in `packages/tools/src/sauce/<tool-name>.ts`.
 - [ ] **2. Schema & Registration**: Define TypeBox parameters and assemble the `AgentTool` in `packages/tools/src/index.ts`.
-- [ ] **3. System Prompt Sync**: Add the tool snippet to `<tools>` and any guardrails to `<rules>` in `packages/tools/src/agent-prompt/base-prompt.ts`.
+- [ ] **3. System Prompt Sync**: Add the tool snippet to `<tools>` and any guardrails to `<rules>` in `packages/agent-prompt/src/base-prompt.ts`.
 - [ ] **4. Verification**: Run `pnpm run check-types` and `./scripts/checks/check-rust.sh` before committing.
 
 ---

@@ -1,6 +1,7 @@
 import { Agent } from "@cobot/agent-core";
 import { streamSimple } from "@earendil-works/pi-ai/compat";
-import { createBaseTools, buildBasePrompt } from "@cobot/tools";
+import { createBaseTools } from "@cobot/tools";
+import { buildBasePrompt } from "@cobot/agent-prompt";
 import { resolveModel } from "./models/catalog.js";
 import { streamAntigravity } from "./models/antigravity-stream.js";
 import type { AgentRunRequest, AgentDomainEvent } from "@cobot/shared";

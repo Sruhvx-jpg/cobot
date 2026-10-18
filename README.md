@@ -16,7 +16,8 @@ cobot/
 │
 ├── packages/
 │   ├── agent-core/       # Headless turn-loop agent engine (extracted directly from Pi)
-│   ├── tools/            # Built-in tools, sauce/ execution logic & base agent prompt
+│   ├── agent-prompt/     # Dedicated base and dynamic system prompt builders
+│   ├── tools/            # Built-in tools & sauce/ execution implementations
 │   ├── adaptor/          # MCP tool adapter for agents to connect with microservices
 │   ├── shared/           # Shared domain types, Result wrappers, utils
 │   └── typescript-config/# Shared TypeScript compiler profiles
@@ -36,14 +37,18 @@ cobot/
 - Provides pure `Agent`, `runAgentLoop`, `AgentTool`, and `StreamFn` contracts.
 - See [`packages/agent-core/README.md`](./packages/agent-core/README.md).
 
-### 2. `packages/tools` (`@cobot/tools`)
+### 2. `packages/agent-prompt` (`@cobot/agent-prompt`)
+- Dedicated system prompt builders and context compilers.
+- **`src/base-prompt.ts`**: Base system prompt with Option 2 multi-purpose preamble, `<tools>`, `<operational_dogmas>`, `<rules>`, and auto-detected `<project_context>`.
+- See [`packages/agent-prompt/README.md`](./packages/agent-prompt/README.md).
+
+### 3. `packages/tools` (`@cobot/tools`)
 - Dedicated package housing standard built-in tools (`read`, `write`, `bash`).
 - **`src/sauce/`**: Isolated execution implementations (`read.ts`, `write.ts`, `bash.ts`).
 - **`src/utils/`**: Reusable path and process execution helpers (`path.ts`, `exec.ts`).
-- **`src/agent-prompt/`**: Base agent prompt with operational dogmas (`base-prompt.ts`).
 - See [`packages/tools/README.md`](./packages/tools/README.md).
 
-### 3. `packages/adaptor` (`@cobot/adaptor`)
+### 4. `packages/adaptor` (`@cobot/adaptor`)
 - MCP tool adapter enabling agents to connect to other microservices (such as `agent-house`).
 
 ### 4. `packages/shared` (`@cobot/shared`)

@@ -41,6 +41,9 @@ importers:
       '@cobot/agent-core':
         specifier: workspace:*
         version: link:../../packages/agent-core
+      '@cobot/agent-prompt':
+        specifier: workspace:*
+        version: link:../../packages/agent-prompt
       '@cobot/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -136,6 +139,15 @@ importers:
       typebox:
         specifier: ^1.3.27
         version: 1.4.2
+
+  packages/agent-prompt:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.1
+        version: 22.20.5
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
 
   packages/shared: {}
 

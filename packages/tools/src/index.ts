@@ -9,7 +9,6 @@ export * from "./sauce/write.js";
 export * from "./sauce/bash.js";
 export * from "./utils/path.js";
 export * from "./utils/exec.js";
-export * from "./agent-prompt/base-prompt.js";
 
 export const ReadParamsSchema = Type.Object({
   path: Type.String({ description: "Relative or absolute path to the file" }),
