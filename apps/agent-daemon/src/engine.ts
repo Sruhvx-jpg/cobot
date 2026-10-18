@@ -1,6 +1,6 @@
 import { Agent } from "@cobot/agent-core";
 import { streamSimple } from "@earendil-works/pi-ai/compat";
-import { createBaseTools } from "./tools/index.js";
+import { createBaseTools, buildBasePrompt } from "@cobot/tools";
 import { resolveModel } from "./models/catalog.js";
 import { streamAntigravity } from "./models/antigravity-stream.js";
 import type { AgentRunRequest, AgentDomainEvent } from "@cobot/shared";
@@ -47,10 +47,7 @@ export class CobotAgentEngine {
       initialState: {
         model,
         tools,
-        systemPrompt: `You are an expert coding assistant operating inside the Cobot harness.
-Working directory: ${cwd}
-Available tools: read, write, bash.
-Be helpful, proactive, and concise.`,
+        systemPrompt: buildBasePrompt(cwd),
         thinkingLevel: request.thinkingLevel ?? "medium",
       },
       streamFn,
