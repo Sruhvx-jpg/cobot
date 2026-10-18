@@ -2,7 +2,7 @@
   "name": "@cobot/tracer-duty",
   "private": true,
   "scripts": {
-    "build": "go build ./...",
-    "check-types": "go vet ./..."
+    "build": "cd src && go build ./...",
+    "check-types": "cd src && go vet ./..."
   }
 }

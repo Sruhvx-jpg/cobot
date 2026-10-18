@@ -33,7 +33,10 @@ git commit
    ├──► [Stage 4] scripts/checks/check-rust.sh
    │    Compiles native Rust desktop shell via cargo check.
    │
-   └──► [Stage 5] scripts/checks/check-audit.sh
+   ├──► [Stage 5] scripts/checks/check-go.sh
+   │    Runs gofmt, go vet, golangci-lint, and govulncheck on Go microservices.
+   │
+   └──► [Stage 6] scripts/checks/check-audit.sh
         Audits npm dependencies for critical security vulnerabilities.
 ```
 
@@ -52,6 +55,14 @@ You can test any check component independently during development:
 ./scripts/checks/check-types.sh
 
 # Typecheck native Tauri Rust shell
+./scripts/checks/check-rust.sh
+
+# Run Go linter, compiler checks, and vulnerability audit
+./scripts/checks/check-go.sh
+
+# Audit dependencies for critical CVEs
+./scripts/checks/check-audit.sh
+```
 ./scripts/checks/check-rust.sh
 
 # Audit dependencies for critical CVEs

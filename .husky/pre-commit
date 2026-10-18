@@ -4,6 +4,7 @@ echo "⚡ [Cobot Pre-Commit] Running modular verification pipeline..."
 ./scripts/checks/check-format.sh
 ./scripts/checks/check-types.sh
 ./scripts/checks/check-rust.sh
+./scripts/checks/check-go.sh
 ./scripts/checks/check-audit.sh
 
 echo "🎉 [Cobot Pre-Commit] All verification checks passed cleanly!"

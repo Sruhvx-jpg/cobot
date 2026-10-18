@@ -1,0 +1,21 @@
+name: "Setup Go Environment"
+description: "Reusable component to install Go and cache modules"
+
+inputs:
+  go-version:
+    description: "Go version"
+    required: false
+    default: "stable"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.go-version }}
+        cache: true
+        cache-dependency-path: |
+          go.work
+          apps/tracer-duty/src/go.mod
+          apps/agent-house/src/go.mod
