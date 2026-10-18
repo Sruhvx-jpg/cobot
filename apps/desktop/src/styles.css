@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Pure Pitch-Black Dark Theme */
+  :root[data-theme="dark"] {
+    --bg-main: #000000;
+    --bg-surface: #0a0a0a;
+    --bg-card: #111111;
+    --border: #222222;
+    --border-hover: #383838;
+    --text-main: #ffffff;
+    --text-muted: #888888;
+    --text-subtle: #555555;
+    --bubble-user: #141414;
+    --bubble-agent: #080808;
+    --accent: #ffffff;
+  }
+
+  /* Clean White Light Theme */
+  :root[data-theme="light"] {
+    --bg-main: #ffffff;
+    --bg-surface: #f7f7f7;
+    --bg-card: #efefef;
+    --border: #e2e2e2;
+    --border-hover: #cccccc;
+    --text-main: #000000;
+    --text-muted: #666666;
+    --text-subtle: #999999;
+    --bubble-user: #f0f0f0;
+    --bubble-agent: #fafafa;
+    --accent: #000000;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+  }
+}
+
+/* Corner Smoothing (Squircle fallback & modern property) */
+.smooth-corners {
+  border-radius: 1.25rem;
+  corner-shape: squircle;
+}
+
+.smooth-corners-lg {
+  border-radius: 1.5rem;
+  corner-shape: squircle;
+}
+
+.smooth-corners-sm {
+  border-radius: 0.75rem;
+  corner-shape: squircle;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-subtle);
+}

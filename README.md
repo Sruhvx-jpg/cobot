@@ -1,159 +1,85 @@
-# Turborepo starter
+# Cobot
 
-This Turborepo starter is maintained by the Turborepo core team.
+High-performance coding agent monorepo orchestrated with **Turborepo** and **pnpm workspaces**.
 
-## Using this example
+---
 
-Run the following command:
+## Monorepo Architecture
 
-```sh
-npx create-turbo@latest
+```
+cobot/
+├── apps/
+│   ├── agent-daemon/     # Express.js AG-UI SSE streaming backend daemon (port 3000)
+│   └── desktop/          # Tauri 2.0 desktop frontend shell + Vite + React + Tailwind
+│
+├── packages/
+│   ├── agent-core/       # Headless turn-loop agent engine (extracted directly from Pi)
+│   ├── shared/           # Shared domain types, Result wrappers, utils
+│   └── typescript-config/# Shared TypeScript compiler profiles
+│
+├── pnpm-workspace.yaml   # Workspace member configuration
+├── turbo.json            # Turborepo task pipeline (build, check-types, dev)
+└── package.json          # Root scripts and packageManager definition
 ```
 
-## What's inside?
+---
 
-This Turborepo includes the following packages/apps:
+## Packages
 
-### Apps and Packages
+### 1. `packages/agent-core` (`@cobot/agent-core`)
+- Headless, in-memory agent turn-loop engine.
+- Stripped of external CLI, TUI, and MCP harness baggage.
+- Provides pure `Agent`, `runAgentLoop`, `AgentTool`, and `StreamFn` contracts.
+- See [`packages/agent-core/README.md`](./packages/agent-core/README.md) for architecture details.
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `@next/eslint-plugin-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+### 2. `packages/shared` (`@cobot/shared`)
+- Shared domain types (`AgentRunRequest`, `AgentDomainEvent`).
+- Functional `Result<T, E>` error handling primitives (`ok`, `err`, `isOk`, `isErr`).
+- Runtime helper functions (`sleep`, `truncate`, `now`).
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+---
 
-### Utilities
+## Applications
 
-This Turborepo has some additional tools already setup for you:
+### 1. `apps/agent-daemon` (`@cobot/agent-daemon`)
+- **Runtime**: Express.js with TypeScript (`tsx`).
+- **Protocol**: **AG-UI (Agent–User Interaction Protocol)** over Server-Sent Events.
+- **Features**:
+  - `src/engine.ts`: Pure agent loop orchestrator (zero HTTP / transport awareness).
+  - `src/ag-ui.ts`: AG-UI protocol event encoder.
+  - `src/tools/index.ts`: Strongly typed standard coding tools (`read`, `write`, `bash`).
+  - `src/auth/antigravity.ts`: Google Antigravity Code Assist OAuth PKCE flow.
+  - `src/models/catalog.ts`: Dynamic live model discovery from Antigravity API.
+  - `src/models/antigravity-stream.ts`: Google Antigravity Code Assist streaming adapter with cryptographic `thoughtSignature` preservation.
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+#### Start Daemon:
+```bash
+pnpm --filter @cobot/agent-daemon dev
 ```
 
-Without global `turbo`, use your package manager:
+### 2. `apps/desktop` (`@cobot/desktop`)
+- **Runtime**: Tauri 2.0 desktop shell (React 19, Tailwind CSS, Lucide icons).
+- **Features**:
+  - Pure pitch-black (`#000000`) dark theme + white light theme with top-right switcher.
+  - Collapsible sidebar with icon-only controls (`+` New Session, `PanelLeftClose`/`PanelLeftOpen`).
+  - Wider chat input with squircle corner smoothing (`smooth-corners`).
+  - Dynamic model dropdown embedded directly inside the prompt container.
+  - Live AG-UI streaming with dedicated `LoadingDots` (`...`) animation component.
+  - Mid-flight steering support during active agent turns.
 
-```sh
-cd my-turborepo
-npx turbo build
-pnpm exec turbo build
-pnpm exec turbo build
+#### Run Desktop:
+```bash
+pnpm --filter @cobot/desktop tauri dev
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+---
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+## Turborepo Commands
 
-```sh
-turbo build --filter=docs
+```bash
+# Typecheck all packages in parallel (with Turbo caching)
+pnpm run check-types
+
+# Develop all apps
+pnpm run dev
 ```
-
-Without global `turbo`:
-
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)

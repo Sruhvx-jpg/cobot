@@ -1,0 +1,19 @@
+{
+  "name": "@cobot/shared",
+  "version": "0.1.0",
+  "description": "Shared utilities, Result types, and common domain models for Cobot",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {}
+}

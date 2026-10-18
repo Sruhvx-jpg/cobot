@@ -1,0 +1,27 @@
+name: "Setup Tauri Linux Build Environment"
+description: "Reusable component to install Rust stable, Linux WebKitGTK 4.1 libraries, and configure cargo cache"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Linux System Libraries
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          libwebkit2gtk-4.1-dev \
+          libappindicator3-dev \
+          librsvg2-dev \
+          patchelf \
+          libasound2-dev \
+          libssl-dev
+
+    - name: Setup Rust Stable Toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
+
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: apps/desktop/src-tauri

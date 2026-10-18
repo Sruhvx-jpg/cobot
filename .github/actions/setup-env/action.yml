@@ -1,0 +1,26 @@
+name: "Setup Node.js & pnpm Environment"
+description: "Reusable component to install Node.js 24, pnpm, and cache dependencies"
+
+inputs:
+  node-version:
+    description: "Node.js version"
+    required: false
+    default: "24"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: 11.25.0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: "pnpm"
+
+    - name: Install Monorepo Dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
