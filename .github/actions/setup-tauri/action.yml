@@ -10,11 +10,11 @@ runs:
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
           libwebkit2gtk-4.1-dev \
-          libappindicator3-dev \
           librsvg2-dev \
           patchelf \
           libasound2-dev \
           libssl-dev
+        sudo apt-get install -y --no-install-recommends libayatana-appindicator3-dev || sudo apt-get install -y --no-install-recommends libappindicator3-dev || true
 
     - name: Setup Rust Stable Toolchain
       uses: dtolnay/rust-toolchain@stable
