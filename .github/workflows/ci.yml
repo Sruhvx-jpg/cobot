@@ -79,6 +79,8 @@ jobs:
 
       - name: Setup Go Environment
         uses: ./.github/actions/setup-go
+        with:
+          go-version: "1.24"
 
       - name: Verify Code Formatting (gofmt)
         run: |
@@ -106,9 +108,14 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.64
-          working-directory: apps/tracer-duty/src
+          args: ./apps/tracer-duty/src/... ./apps/agent-house/src/...
 
-      - name: Official govulncheck Security Action
+      - name: Run govulncheck on TracerDuty
         uses: golang/govulncheck-action@v1
         with:
           work-dir: apps/tracer-duty/src
+
+      - name: Run govulncheck on AgentHouse
+        uses: golang/govulncheck-action@v1
+        with:
+          work-dir: apps/agent-house/src

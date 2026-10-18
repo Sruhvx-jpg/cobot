@@ -1,3 +1,3 @@
 module github.com/Sruhvx-jpg/cobot/apps/agent-house
 
-go 1.27.0
+go 1.24
