@@ -89,11 +89,30 @@ app.get("/api/agents", async (_req, res) => {
 /** Create or update an agent manifest */
 app.post("/api/agents", async (req, res) => {
   try {
-    const manifest = req.body as AgentManifest;
-    if (!manifest || !manifest.id || !manifest.name) {
-      res.status(400).json({ error: "Agent 'id' and 'name' are required." });
+    const body = req.body as Partial<AgentManifest>;
+    if (
+      !body ||
+      !body.name ||
+      typeof body.name !== "string" ||
+      !body.name.trim()
+    ) {
+      res.status(400).json({ error: "Agent 'name' is required." });
       return;
     }
+    const name = body.name.trim();
+    const id =
+      body.id?.trim().toLowerCase() ||
+      name
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]/g, "-")
+        .replace(/-+/g, "-");
+
+    const manifest: AgentManifest = {
+      ...body,
+      id,
+      name,
+    };
+
     const created = await engine.vault.agents.create(manifest);
     res.json({ agent: created });
   } catch (err) {

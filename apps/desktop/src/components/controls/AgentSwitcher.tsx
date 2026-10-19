@@ -19,7 +19,6 @@ export const AgentSwitcher: React.FC<AgentSwitcherProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // New Agent Form State
-  const [newId, setNewId] = useState("");
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newIdentity, setNewIdentity] = useState("");
@@ -50,16 +49,16 @@ export const AgentSwitcher: React.FC<AgentSwitcherProps> = ({
     e.preventDefault();
     setError(null);
 
-    const cleanId = newId
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9_-]/g, "-");
     const cleanName = newName.trim();
-
-    if (!cleanId || !cleanName) {
-      setError("Agent ID and Name are required.");
+    if (!cleanName) {
+      setError("Agent name is required.");
       return;
     }
+
+    const cleanId = cleanName
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, "-")
+      .replace(/-+/g, "-");
 
     setIsSubmitting(true);
     try {
@@ -84,7 +83,6 @@ export const AgentSwitcher: React.FC<AgentSwitcherProps> = ({
       onSelectAgent(agent);
 
       // Reset and close modal
-      setNewId("");
       setNewName("");
       setNewDescription("");
       setNewIdentity("");
@@ -208,25 +206,11 @@ export const AgentSwitcher: React.FC<AgentSwitcherProps> = ({
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-[var(--text-muted)]">
-                  Agent ID
+                  Agent Name
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. security-auditor, code-reviewer"
-                  value={newId}
-                  onChange={(e) => setNewId(e.target.value)}
-                  className="px-3 py-2 bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-main)] smooth-corners-sm text-xs focus:outline-hidden focus:border-[var(--border-hover)]"
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-[var(--text-muted)]">
-                  Display Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Security Auditor"
+                  placeholder="e.g. Security Auditor, Code Reviewer"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   className="px-3 py-2 bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-main)] smooth-corners-sm text-xs focus:outline-hidden focus:border-[var(--border-hover)]"
