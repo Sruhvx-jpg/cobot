@@ -54,4 +54,3 @@ google-cloud-googleapis = { workspace = true }
 google-cloud-gax = { workspace = true }
 
 chroma-types = { workspace = true, features = ["testing"] }
-spanner-migrations = { workspace = true }

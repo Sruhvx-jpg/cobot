@@ -56,7 +56,6 @@ indicatif = { workspace = true }
 clap = { workspace = true }
 anyhow = { workspace = true }
 sprs = { workspace = true }
-chroma-benchmark = { workspace = true }
 regex = { workspace = true }
 rayon = { workspace = true }
 criterion = { workspace = true }
