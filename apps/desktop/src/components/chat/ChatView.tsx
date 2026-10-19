@@ -1,5 +1,9 @@
 import React from "react";
-import type { ChatMessage, ModelOption } from "../../types/chat.js";
+import type {
+  ChatMessage,
+  ModelOption,
+  ThinkingLevel,
+} from "../../types/chat.js";
 import { MessageList } from "./MessageList.js";
 import { ChatInput } from "./ChatInput.js";
 import { SteerInput } from "./SteerInput.js";
@@ -10,6 +14,8 @@ interface ChatViewProps {
   models: ModelOption[];
   currentModel: ModelOption | null;
   onModelChange: (model: ModelOption) => void;
+  thinkingLevel: ThinkingLevel;
+  onThinkingLevelChange: (level: ThinkingLevel) => void;
   onSend: (text: string) => void;
   onSteer: (message: string) => Promise<void>;
 }
@@ -20,6 +26,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   models,
   currentModel,
   onModelChange,
+  thinkingLevel,
+  onThinkingLevelChange,
   onSend,
   onSteer,
 }) => {
@@ -33,6 +41,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
           models={models}
           currentModel={currentModel}
           onModelChange={onModelChange}
+          thinkingLevel={thinkingLevel}
+          onThinkingLevelChange={onThinkingLevelChange}
           disabled={isStreaming}
         />
       </div>

@@ -4,11 +4,17 @@ import { Header } from "./components/layout/Header.js";
 import { ChatView } from "./components/chat/ChatView.js";
 import { useSessions } from "./hooks/useSessions.js";
 import { useAgentStream } from "./hooks/useAgentStream.js";
-import type { ModelOption, AuthStatus, AgentOption } from "./types/chat.js";
+import type {
+  ModelOption,
+  AuthStatus,
+  AgentOption,
+  ThinkingLevel,
+} from "./types/chat.js";
 
 export const App: React.FC = () => {
   const [agents, setAgents] = useState<AgentOption[]>([]);
   const [currentAgent, setCurrentAgent] = useState<AgentOption | null>(null);
+  const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel>("medium");
 
   const {
     sessions,
@@ -78,7 +84,13 @@ export const App: React.FC = () => {
   }, [refreshAuthAndModels, refreshAgents]);
 
   const handleSend = (text: string) => {
-    sendMessage(text, currentModel, activeSession.id, currentAgent?.id);
+    sendMessage(
+      text,
+      currentModel,
+      activeSession.id,
+      currentAgent?.id,
+      thinkingLevel,
+    );
   };
 
   const handleSteer = async (message: string) => {
@@ -113,6 +125,8 @@ export const App: React.FC = () => {
           models={models}
           currentModel={currentModel}
           onModelChange={setCurrentModel}
+          thinkingLevel={thinkingLevel}
+          onThinkingLevelChange={setThinkingLevel}
           onSend={handleSend}
           onSteer={handleSteer}
         />

@@ -1,5 +1,7 @@
 export type Theme = "dark" | "light";
 
+export type { ThinkingLevel } from "../types.js";
+
 export interface ToolCall {
   id: string;
   name: string;

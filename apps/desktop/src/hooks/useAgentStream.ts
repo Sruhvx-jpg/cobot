@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import type { ChatMessage, ModelOption } from "../types/chat.js";
+import type { ChatMessage, ModelOption, ThinkingLevel } from "../types/chat.js";
 
 export function useAgentStream(
   updateMessages: (
@@ -15,6 +15,7 @@ export function useAgentStream(
     model: ModelOption | null,
     sessionId: string,
     agentId?: string,
+    thinkingLevel?: ThinkingLevel,
   ) => {
     if (isStreaming) return;
 
@@ -54,6 +55,7 @@ export function useAgentStream(
           agentId,
           modelName: model?.id,
           provider: model?.provider,
+          thinkingLevel,
         }),
         signal: controller.signal,
       });

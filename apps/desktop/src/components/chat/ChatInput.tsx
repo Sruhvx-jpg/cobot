@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ArrowUp } from "lucide-react";
 import { ModelSwitcher } from "../controls/ModelSwitcher.js";
-import type { ModelOption } from "../../types/chat.js";
+import type { ModelOption, ThinkingLevel } from "../../types/chat.js";
 
 interface ChatInputProps {
   onSend: (text: string) => void;
   models: ModelOption[];
   currentModel: ModelOption | null;
   onModelChange: (model: ModelOption) => void;
+  thinkingLevel: ThinkingLevel;
+  onThinkingLevelChange: (level: ThinkingLevel) => void;
   disabled?: boolean;
 }
 
@@ -16,6 +18,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   models,
   currentModel,
   onModelChange,
+  thinkingLevel,
+  onThinkingLevelChange,
   disabled = false,
 }) => {
   const [input, setInput] = useState("");
@@ -58,6 +62,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             models={models}
             currentModel={currentModel}
             onModelChange={onModelChange}
+            thinkingLevel={thinkingLevel}
+            onThinkingLevelChange={onThinkingLevelChange}
             disabled={disabled}
           />
         </div>
