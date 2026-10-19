@@ -11,6 +11,7 @@
 This package retains only the core systems engine and client bindings necessary for Cobot's execution model:
 
 * **`rust/` (Core Vector Engine)**:
+  - `rust/cobot-adapter`: In-process vector storage adapter bridging EmbeddingGemma 2 directly to Chroma's storage and distance engines with zero network overhead.
   - `rust/index`: Fast vector indexing (HNSW, Tantivy integration).
   - `rust/distance`: SIMD-accelerated distance metrics (Cosine, Euclidean, Dot Product).
   - `rust/segment`: Record, vector, and metadata segment managers.
@@ -23,8 +24,33 @@ This package retains only the core systems engine and client bindings necessary 
   - Protocol definitions (`chroma.proto`) required for building Rust crates and schema-accurate serialization.
 
 * **`clients/` (TypeScript / JS SDK)**:
-  - `clients/new-js`: Modern modular TypeScript client monorepo for querying and managing vector collections.
-  - `clients/js`: Upstream legacy client maintained for fallback compatibility.
+  - `clients/new-js`: Modern modular TypeScript client for querying and managing collections without heavy runtime dependencies.
+
+---
+
+## EmbeddingGemma 2 Integration (`cobot-adapter`)
+
+Upstream Chroma uses a default ONNX-based model (`all-MiniLM-L6-v2`) via `@chroma-core/default-embed`. This was completely eliminated in favor of **EmbeddingGemma 2** (Google's 768-dimensional dense embedding model).
+
+The `cobot-adapter` crate (`rust/cobot-adapter`) provides an in-process, zero-daemon bridge:
+
+```rust
+use cobot_adapter::{CobotVectorStore, EmbeddingGemmaEmbedder};
+use chroma_distance::DistanceFunction;
+
+// 1. Initialize EmbeddingGemma embedder (768-dim)
+let embedder = EmbeddingGemmaEmbedder::new(768);
+
+// 2. Initialize in-process vector store with SIMD Cosine distance
+let store = CobotVectorStore::new(embedder, DistanceFunction::Cosine);
+
+// 3. Add documents (automatically embedded and indexed)
+store.add("doc-1", "Cobot autonomous agent memory", None).await?;
+
+// 4. Query directly or format for LLM agent tool calls
+let matches = store.search("agent memory", 5).await?;
+let agent_prompt_context = store.search_for_agent("agent memory", 5).await?;
+```
 
 ---
 
