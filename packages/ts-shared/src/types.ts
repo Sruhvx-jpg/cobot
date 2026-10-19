@@ -1,6 +1,20 @@
 export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high";
 
+export interface AgentManifest {
+  id: string;
+  name: string;
+  description?: string;
+  identity?: string;
+  extraTools?: Array<{ name: string; description: string } | string>;
+  extraRules?: string[];
+  extraDogmas?: string[];
+  customSections?: Array<{ tag: string; content: string }>;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
 export interface AgentRunRequest {
+  agentId?: string;
   prompt: string;
   cwd?: string;
   sessionId?: string;

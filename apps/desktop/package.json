@@ -23,6 +23,7 @@
     "vite": "^8.3.4"
   },
   "dependencies": {
+    "@cobot/ts-shared": "workspace:*",
     "@tauri-apps/api": "^2.12.4",
     "lucide-react": "^1.59.0",
     "react": "^19.3.1",
