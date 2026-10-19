@@ -1,6 +1,44 @@
 # Cobot Architecture Vision & Future Roadmap
 
-This document captures the systems design, architectural roadmap, and technical vision for the **Cobot** ecosystem as brainstormed and engineered across development sessions.
+This document captures the systems design, architectural roadmap, and technical vision for the **Cobot** ecosystem, preserving the **verbatim words and brainstormed ideas** directly from the lead architect alongside the technical specifications.
+
+---
+
+## 0. Lead Architect's Raw Vision (Verbatim Notes)
+
+> *"note that the agents will be multipurpose agents not just coding agents"*
+
+### On In-Process Chroma Engine, EmbeddingGemma 2 & Rust Adapter
+> *"so yeah just the engine does the job. but yeah i wanne keep it in the package, what do u say?"*
+> 
+> *"also explcicitly mention that this engine will in future/ is in present understand extension for cobot's usecase, it is not built by sruhvx-jpg bbut a cloned and trimmed for cobot usecase"*
+> 
+> *"btw if use the an embedding model like embedding gemma 2, we wont really need the embedder of chromadb, right? ... can u remove the embedder than? make a adaptar that bridges the embedding model we would use and with the storage"*
+> 
+> *"btw cant we have this adapter in rust tho? ... no we dont need tauri ipc, well we prolly make a toool for the agents to actually use this adapte later. btw if am right thi adapter is something that dircetly interacts witht eh engine right?"*
+
+### On Cloud Seeding & Persistent Runner (Instabox)
+> *"aight one thing that is remaining is cloud seeding, as i have told u this will be a persistent agent runnig in cloud, so we need to seed evertything to the cloud but we are not doing it right now, as alot of stuff is not finalized, like there are some backlogs"*
+> 
+> *"but will it be possible on the free instabox vm? 4 vCPUs, 8 GB RAM, and 20 GB of storage. this is the free vm we get btw"*
+
+### On TracerDuty, AgentHouse, Backup & Distributed Subsystems
+> *"i hope u account or the other stuff this thing is going to have, the tracer dty the agent house and am thinking og a pager duty and backup system and a distrbuted sys and also a small >=1b model seeder that seeds too various devices"*
+> 
+> *"alot of it it will be local only as of now but yeah i think the agnt house will be extended to be more than just being a local houe for the agent to talk locally on the machine"*
+
+### On Model Seeder & Child Agents Across Devices
+> *"model seeder will just seed a small model it can use to communicate with, thats like creating a small child agent to various devices to coordinate with"*
+> 
+> *"any ways my motivation to made this seeder isnt noble btw ... its more or less vicious to say"*
+
+### On Go Git Wrapper, Android App & Custom Networking Tunneling
+> *"yeah to manage space am thinking og having a distributed backend sys, am also thinking of my a git wrapper for the agent specifically in go like how nantrhopic mde"*
+> 
+> *"also thinkinng of make a android app too so there will be a use of webhook but anyways the server will still be the same that the desktop and andoirdn app frontned wll use regardless, just need to introduce a secure tunneling in all. am thinking of making a simple networking tunniing here, like no need of hacing clouflare proxy, but yeah lets see, what do u think will happen. at scale? i think the current compute would be not enough"*
+
+### On Actix-Files & Actix-Web Exploration
+> *"is there any usecase of actix-files in our project? ... is it not possible to replace the axum to actix? ... well there are other things we are gonne be doing too u remember? maybe somewhere ther i could use it"*
 
 ---
 
