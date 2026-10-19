@@ -14,6 +14,7 @@ export function useAgentStream(
     prompt: string,
     model: ModelOption | null,
     sessionId: string,
+    agentId?: string,
   ) => {
     if (isStreaming) return;
 
@@ -50,6 +51,7 @@ export function useAgentStream(
         body: JSON.stringify({
           prompt,
           sessionId,
+          agentId,
           modelName: model?.id,
           provider: model?.provider,
         }),

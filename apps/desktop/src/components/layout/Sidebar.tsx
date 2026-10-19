@@ -1,6 +1,7 @@
 import React from "react";
 import { Plus, PanelLeftClose } from "lucide-react";
 import { SessionItem } from "./SessionItem.js";
+import { ThemeSwitcher } from "../controls/ThemeSwitcher.js";
 import type { Session } from "../../types/chat.js";
 
 interface SidebarProps {
@@ -28,7 +29,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         isOpen ? "w-60 opacity-100" : "w-0 opacity-0 border-r-0"
       }`}
     >
-      <div className="h-12 flex items-center justify-between px-3 border-b border-[var(--border)]">
+      {/* Top action bar */}
+      <div className="h-12 flex items-center justify-between px-3 border-b border-[var(--border)] flex-shrink-0">
         <button
           className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)] smooth-corners-sm transition-colors cursor-pointer"
           onClick={onNewSession}
@@ -46,6 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
 
+      {/* Session list */}
       <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
         {sessions.map((session) => (
           <SessionItem
@@ -56,6 +59,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onDelete={onDeleteSession}
           />
         ))}
+      </div>
+
+      {/* Downside of the sidebar: Theme Switcher */}
+      <div className="p-3 border-t border-[var(--border)] flex items-center justify-between flex-shrink-0 bg-[var(--bg-main)]">
+        <span className="text-xs text-[var(--text-muted)] font-medium">
+          Theme
+        </span>
+        <ThemeSwitcher />
       </div>
     </aside>
   );

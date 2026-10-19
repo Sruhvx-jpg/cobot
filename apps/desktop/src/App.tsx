@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "./components/layout/Sidebar.js";
 import { Header } from "./components/layout/Header.js";
 import { ChatView } from "./components/chat/ChatView.js";
 import { useSessions } from "./hooks/useSessions.js";
 import { useAgentStream } from "./hooks/useAgentStream.js";
-import type { ModelOption, AuthStatus } from "./types/chat.js";
+import type { ModelOption, AuthStatus, AgentOption } from "./types/chat.js";
 
 export const App: React.FC = () => {
+  const [agents, setAgents] = useState<AgentOption[]>([]);
+  const [currentAgent, setCurrentAgent] = useState<AgentOption | null>(null);
+
   const {
     sessions,
     activeSessionId,
@@ -15,7 +18,7 @@ export const App: React.FC = () => {
     createSession,
     deleteSession,
     updateSessionMessages,
-  } = useSessions();
+  } = useSessions(currentAgent?.id || "default");
 
   const { isStreaming, sendMessage, steerActiveSession } = useAgentStream(
     updateSessionMessages,
@@ -28,7 +31,26 @@ export const App: React.FC = () => {
     authenticated: false,
   });
 
-  const refreshAuthAndModels = async () => {
+  const refreshAgents = useCallback(async () => {
+    try {
+      const res = await fetch("http://localhost:3000/api/agents");
+      const data = await res.json();
+      if (data.agents && data.agents.length > 0) {
+        setAgents(data.agents);
+        setCurrentAgent((prev) => {
+          if (!prev) return data.agents[0];
+          const matched = data.agents.find(
+            (a: AgentOption) => a.id === prev.id,
+          );
+          return matched || data.agents[0];
+        });
+      }
+    } catch {
+      // Backend initializing
+    }
+  }, []);
+
+  const refreshAuthAndModels = useCallback(async () => {
     try {
       const [authRes, modelsRes] = await Promise.all([
         fetch("http://localhost:3000/api/auth/status"),
@@ -46,16 +68,17 @@ export const App: React.FC = () => {
         setCurrentModel(null);
       }
     } catch {
-      // Backend starting up
+      // Backend initializing
     }
-  };
+  }, []);
 
   useEffect(() => {
     refreshAuthAndModels();
-  }, []);
+    refreshAgents();
+  }, [refreshAuthAndModels, refreshAgents]);
 
   const handleSend = (text: string) => {
-    sendMessage(text, currentModel, activeSession.id);
+    sendMessage(text, currentModel, activeSession.id, currentAgent?.id);
   };
 
   const handleSteer = async (message: string) => {
@@ -70,7 +93,7 @@ export const App: React.FC = () => {
         sessions={sessions}
         activeSessionId={activeSessionId}
         onSelectSession={setActiveSessionId}
-        onNewSession={createSession}
+        onNewSession={() => createSession(currentAgent?.id || "default")}
         onDeleteSession={deleteSession}
       />
       <div className="flex-1 h-full flex flex-col bg-[var(--bg-main)] overflow-hidden">
@@ -79,6 +102,10 @@ export const App: React.FC = () => {
           onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
           authStatus={authStatus}
           onRefreshAuth={refreshAuthAndModels}
+          agents={agents}
+          currentAgent={currentAgent}
+          onSelectAgent={setCurrentAgent}
+          onRefreshAgents={refreshAgents}
         />
         <ChatView
           messages={activeSession.messages}

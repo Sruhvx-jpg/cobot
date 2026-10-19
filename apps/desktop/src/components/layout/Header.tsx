@@ -1,14 +1,18 @@
 import React from "react";
 import { PanelLeftOpen } from "lucide-react";
-import { ThemeSwitcher } from "../controls/ThemeSwitcher.js";
 import { AuthButton } from "../controls/AuthButton.js";
-import type { AuthStatus } from "../../types/chat.js";
+import { AgentSwitcher } from "../controls/AgentSwitcher.js";
+import type { AuthStatus, AgentOption } from "../../types/chat.js";
 
 interface HeaderProps {
   isSidebarOpen: boolean;
   onToggleSidebar: () => void;
   authStatus: AuthStatus;
   onRefreshAuth: () => void;
+  agents: AgentOption[];
+  currentAgent: AgentOption | null;
+  onSelectAgent: (agent: AgentOption) => void;
+  onRefreshAgents: () => Promise<void>;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,6 +20,10 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleSidebar,
   authStatus,
   onRefreshAuth,
+  agents,
+  currentAgent,
+  onSelectAgent,
+  onRefreshAgents,
 }) => {
   return (
     <header className="h-12 border-b border-[var(--border)] bg-[var(--bg-main)] flex items-center justify-between px-4 flex-shrink-0">
@@ -30,9 +38,16 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
       </div>
+
+      {/* Top-Right action controls: Agent Switcher + Auth */}
       <div className="flex items-center gap-2">
+        <AgentSwitcher
+          agents={agents}
+          currentAgent={currentAgent}
+          onSelectAgent={onSelectAgent}
+          onRefreshAgents={onRefreshAgents}
+        />
         <AuthButton authStatus={authStatus} onRefreshAuth={onRefreshAuth} />
-        <ThemeSwitcher />
       </div>
     </header>
   );
