@@ -39,6 +39,36 @@ function generatePKCE() {
 
 export async function getStoredAuth(): Promise<StoredAuth | null> {
   const creds = await CredentialVault.get("antigravity");
+  if (!creds) return null;
+
+  // Auto-refresh token if expired or about to expire in next 60s
+  if (creds.refresh_token && Date.now() >= creds.expires_at - 60_000) {
+    try {
+      const res = await fetch(TOKEN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: CLIENT_ID,
+          client_secret: CLIENT_SECRET,
+          refresh_token: creds.refresh_token,
+          grant_type: "refresh_token",
+        }).toString(),
+      });
+
+      if (res.ok) {
+        const tokenData = (await res.json()) as {
+          access_token: string;
+          expires_in: number;
+        };
+        creds.access_token = tokenData.access_token;
+        creds.expires_at = Date.now() + tokenData.expires_in * 1000;
+        await CredentialVault.set("antigravity", creds);
+      }
+    } catch (err) {
+      console.error("[AGY OAuth] Automatic token refresh failed:", err);
+    }
+  }
+
   return creds as StoredAuth | null;
 }
 
