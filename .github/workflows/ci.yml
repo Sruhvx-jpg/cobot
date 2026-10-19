@@ -119,3 +119,27 @@ jobs:
         uses: golang/govulncheck-action@v1
         with:
           work-dir: apps/agent-house/src
+
+  # In-Process Vector Engine & Adapter Verification (Chroma Rust Core)
+  chroma-engine:
+    name: Chroma Vector Engine (Rust)
+    runs-on: ubuntu-latest
+    env:
+      RUST_MIN_STACK_SIZE: 8388608
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Protobuf Compiler (protoc)
+        run: |
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo Check (Chroma Rust Core)
+        run: cargo check --manifest-path packages/chroma-engine/Cargo.toml -p cobot-adapter
+
+      - name: Run Adapter Unit Tests
+        run: cargo test --manifest-path packages/chroma-engine/Cargo.toml -p cobot-adapter
+
