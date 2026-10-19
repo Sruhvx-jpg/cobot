@@ -2,7 +2,7 @@
 
 > **Origin & Attribution Disclaimer**:
 > This engine is cloned and trimmed directly from upstream **ChromaDB** ([chroma-core/chroma](https://github.com/chroma-core/chroma)). 
-> It was **NOT** built from scratch by Sruhvx-jpg. It has been specifically extracted, pruned of bloat, and is **actively extended and developed** to serve as an embedded vector database engine and TypeScript client extension for **Cobot**.
+> It was **NOT** built from scratch by Sruhvx-jpg. It has been specifically extracted, streamlined to exclude unused upstream components, and is **actively extended and developed** to serve as an embedded vector database engine and TypeScript client extension for **Cobot**.
 
 ---
 
@@ -28,12 +28,13 @@ This package retains only the core systems engine and client bindings necessary 
 
 ---
 
-## Pruned Upstream Bloat
+## Excluded Upstream Components
 
 To keep Cobot lean and focused, the following upstream components were completely removed:
 * **Python Stack**: Removed `chromadb/`, `clients/python/`, and PyO3 `rust/python_bindings`.
 * **Go Cluster Coordinator**: Removed `go/` (Postgres SysDB coordinator and cluster manager).
 * **Cloud & Orchestration**: Removed `k8s/`, `deployments/`, `Tiltfile`, and Docker Compose multi-node infrastructure.
+* **Heavy Embedder Runtimes**: Removed `default-embed` (`onnxruntime-node` / `@huggingface/transformers`) and third-party vendor wrappers in favor of direct EmbeddingGemma vector indexing.
 * **Non-Essential Artifacts**: Removed sample apps, documentation demos, plans, and upstream GitHub Actions workflows.
 
 ---
