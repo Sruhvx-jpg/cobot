@@ -133,9 +133,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Protobuf Compiler (protoc)
-        run: |
-          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Setup Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
