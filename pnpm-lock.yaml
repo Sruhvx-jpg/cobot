@@ -155,6 +155,8 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  packages/chai-engine: {}
+
   packages/chroma-engine: {}
 
   packages/tools:

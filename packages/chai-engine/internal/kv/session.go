@@ -1,0 +1,78 @@
+package kv
+
+import (
+	"github.com/chaisql/chai/internal/engine"
+	"github.com/cockroachdb/errors"
+	"github.com/cockroachdb/pebble/v2"
+)
+
+type iterator struct {
+	*pebble.Iterator
+}
+
+func (i *iterator) Value() ([]byte, error) {
+	return i.Iterator.ValueAndErr()
+}
+
+func (i *iterator) Start(reverse bool) bool {
+	if !reverse {
+		return i.Iterator.First()
+	}
+
+	return i.Iterator.Last()
+}
+
+func (i *iterator) End(reverse bool) bool {
+	if !reverse {
+		return i.Iterator.Last()
+	}
+
+	return i.Iterator.First()
+}
+
+func (i *iterator) Move(reverse bool) bool {
+	if !reverse {
+		return i.Iterator.Next()
+	}
+
+	return i.Iterator.Prev()
+}
+
+// Get returns a value associated with the given key. If not found, returns ErrKeyNotFound.
+func get(r pebble.Reader, k []byte) ([]byte, error) {
+	value, closer, err := r.Get(k)
+	if err != nil {
+		if errors.Is(err, pebble.ErrNotFound) {
+			return nil, errors.WithStack(engine.ErrKeyNotFound)
+		}
+
+		return nil, err
+	}
+
+	cp := make([]byte, len(value))
+	copy(cp, value)
+
+	err = closer.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	return cp, nil
+}
+
+// Exists returns whether a key exists and is visible by the current session.
+func exists(r pebble.Reader, k []byte) (bool, error) {
+	_, closer, err := r.Get(k)
+	if err != nil {
+		if errors.Is(err, pebble.ErrNotFound) {
+			return false, nil
+		}
+
+		return false, err
+	}
+	err = closer.Close()
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}

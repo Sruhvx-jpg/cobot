@@ -1,0 +1,11 @@
+{
+  "name": "@cobot/chai-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Embedded pure-Go relational SQL engine trimmed from ChaiSQL for Cobot agent-house. Not built from scratch by Sruhvx-jpg.",
+  "type": "module",
+  "scripts": {
+    "test:go": "go test ./...",
+    "check-types": "true"
+  }
+}

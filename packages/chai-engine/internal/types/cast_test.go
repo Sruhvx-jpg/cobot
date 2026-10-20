@@ -1,0 +1,113 @@
+package types_test
+
+import (
+	"math"
+	"testing"
+	"time"
+
+	"github.com/chaisql/chai/internal/types"
+	"github.com/stretchr/testify/require"
+)
+
+func TestCastAs(t *testing.T) {
+	type test struct {
+		v, want types.Value
+		fails   bool
+	}
+	now := time.Now()
+
+	boolV := types.NewBooleanValue(true)
+	integerV := types.NewIntegerValue(10)
+	doubleV := types.NewDoublePrecisionValue(10.5)
+	tsV := types.NewTimestampValue(now)
+	textV := types.NewTextValue("foo")
+	byteaV := types.NewByteaValue([]byte("asdine"))
+
+	check := func(t *testing.T, targetType types.Type, tests []test) {
+		t.Helper()
+
+		for _, test := range tests {
+			t.Run(test.v.String(), func(t *testing.T) {
+				t.Helper()
+
+				got, err := test.v.CastAs(targetType)
+				if test.fails {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+					require.Equal(t, test.want, got)
+				}
+			})
+		}
+	}
+
+	t.Run("bool", func(t *testing.T) {
+		check(t, types.TypeBoolean, []test{
+			{boolV, boolV, false},
+			{integerV, boolV, false},
+			{types.NewIntegerValue(0), types.NewBooleanValue(false), false},
+			{doubleV, nil, true},
+			{textV, nil, true},
+			{types.NewTextValue("true"), boolV, false},
+			{types.NewTextValue("false"), types.NewBooleanValue(false), false},
+			{byteaV, nil, true},
+		})
+	})
+
+	t.Run("integer", func(t *testing.T) {
+		check(t, types.TypeInteger, []test{
+			{boolV, types.NewIntegerValue(1), false},
+			{types.NewBooleanValue(false), types.NewIntegerValue(0), false},
+			{integerV, integerV, false},
+			{doubleV, integerV, false},
+			{textV, nil, true},
+			{types.NewTextValue("10"), integerV, false},
+			{types.NewTextValue("10.5"), integerV, false},
+			{byteaV, nil, true},
+			{types.NewDoublePrecisionValue(math.MaxInt64 + 1), nil, true},
+		})
+	})
+
+	t.Run("double", func(t *testing.T) {
+		check(t, types.TypeDoublePrecision, []test{
+			{boolV, nil, true},
+			{integerV, types.NewDoublePrecisionValue(10), false},
+			{doubleV, doubleV, false},
+			{textV, nil, true},
+			{types.NewTextValue("10"), types.NewDoublePrecisionValue(10), false},
+			{types.NewTextValue("10.5"), doubleV, false},
+			{byteaV, nil, true},
+		})
+	})
+
+	t.Run("ts", func(t *testing.T) {
+		check(t, types.TypeTimestamp, []test{
+			{boolV, nil, true},
+			{integerV, nil, true},
+			{doubleV, nil, true},
+			{types.NewTextValue(now.Format(time.RFC3339Nano)), tsV, false},
+			{byteaV, nil, true},
+		})
+	})
+
+	t.Run("text", func(t *testing.T) {
+		check(t, types.TypeText, []test{
+			{boolV, types.NewTextValue("true"), false},
+			{integerV, types.NewTextValue("10"), false},
+			{doubleV, types.NewTextValue("10.5"), false},
+			{textV, textV, false},
+			{byteaV, types.NewTextValue(`YXNkaW5l`), false},
+		})
+	})
+
+	t.Run("bytea", func(t *testing.T) {
+		check(t, types.TypeBytea, []test{
+			{boolV, nil, true},
+			{integerV, nil, true},
+			{doubleV, nil, true},
+			{types.NewTextValue("YXNkaW5l"), types.NewByteaValue([]byte{0x61, 0x73, 0x64, 0x69, 0x6e, 0x65}), false},
+			{types.NewTextValue("not base64"), nil, true},
+			{byteaV, byteaV, false},
+		})
+	})
+}

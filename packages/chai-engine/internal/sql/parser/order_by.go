@@ -1,0 +1,76 @@
+package parser
+
+import (
+	"errors"
+
+	"github.com/chaisql/chai/internal/expr"
+	"github.com/chaisql/chai/internal/sql/scanner"
+)
+
+func (p *Parser) parseOrderBy() (*expr.Column, scanner.Token, error) {
+	// parse ORDER token
+	ok, err := p.parseOptional(scanner.ORDER, scanner.BY)
+	if err != nil || !ok {
+		return nil, 0, err
+	}
+
+	// parse col
+	col, err := p.parseColumn()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// parse optional ASC or DESC
+	if tok, _, _ := p.ScanIgnoreWhitespace(); tok == scanner.ASC || tok == scanner.DESC {
+		return col, tok, nil
+	}
+	p.Unscan()
+
+	return col, 0, nil
+}
+
+func (p *Parser) parseLimit() (expr.Expr, error) {
+	// parse LIMIT token
+	if ok, err := p.parseOptional(scanner.LIMIT); !ok || err != nil {
+		return nil, err
+	}
+
+	e, err := p.ParseExpr()
+	if err != nil {
+		return nil, err
+	}
+
+	expr.Walk(e, func(e expr.Expr) bool {
+		switch e.(type) {
+		case expr.AggregatorBuilder:
+			err = errors.New("aggregator functions are not allowed in LIMIT clause")
+			return false
+		}
+		return true
+	})
+
+	return e, err
+}
+
+func (p *Parser) parseOffset() (expr.Expr, error) {
+	// parse OFFSET token
+	if ok, err := p.parseOptional(scanner.OFFSET); !ok || err != nil {
+		return nil, err
+	}
+
+	e, err := p.ParseExpr()
+	if err != nil {
+		return nil, err
+	}
+
+	expr.Walk(e, func(e expr.Expr) bool {
+		switch e.(type) {
+		case expr.AggregatorBuilder:
+			err = errors.New("aggregator functions are not allowed in OFFSET clause")
+			return false
+		}
+		return true
+	})
+
+	return e, err
+}

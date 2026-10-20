@@ -104,6 +104,9 @@ jobs:
           cd apps/tracer-duty/src && go test -race -v ./... || true
           cd ../../agent-house/src && go test -race -v ./... || true
 
+      - name: Test Chai Engine (Core SQL)
+        run: cd packages/chai-engine && go test -v .
+
       - name: Official golangci-lint Action
         uses: golangci/golangci-lint-action@v6
         with:
