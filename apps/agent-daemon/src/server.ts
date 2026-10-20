@@ -79,7 +79,7 @@ app.get("/api/models", async (_req, res) => {
 /** List all available agents */
 app.get("/api/agents", async (_req, res) => {
   try {
-    const agents = await engine.agents.list();
+    const agents = await engine.vault.agents.list();
     res.json({ agents });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -113,7 +113,7 @@ app.post("/api/agents", async (req, res) => {
       name,
     };
 
-    const created = await engine.agents.create(manifest);
+    const created = await engine.vault.agents.create(manifest);
     res.json({ agent: created });
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
@@ -123,7 +123,7 @@ app.post("/api/agents", async (req, res) => {
 /** Get a specific agent manifest */
 app.get("/api/agents/:id", async (req, res) => {
   try {
-    const agent = await engine.agents.get(req.params.id);
+    const agent = await engine.vault.agents.get(req.params.id);
     if (!agent) {
       res.status(404).json({ error: `Agent '${req.params.id}' not found.` });
       return;
@@ -137,7 +137,7 @@ app.get("/api/agents/:id", async (req, res) => {
 /** Delete an agent manifest */
 app.delete("/api/agents/:id", async (req, res) => {
   try {
-    const success = await engine.agents.delete(req.params.id);
+    const success = await engine.vault.agents.delete(req.params.id);
     if (!success) {
       res.status(404).json({ error: `Agent '${req.params.id}' not found.` });
       return;
@@ -155,7 +155,7 @@ app.get("/api/sessions", async (req, res) => {
   try {
     const agentId =
       typeof req.query.agentId === "string" ? req.query.agentId : undefined;
-    const sessions = await engine.sessions.list(agentId);
+    const sessions = await engine.vault.sessions.list(agentId);
     res.json({ sessions });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -165,7 +165,7 @@ app.get("/api/sessions", async (req, res) => {
 /** List sessions strictly for an agent */
 app.get("/api/agents/:id/sessions", async (req, res) => {
   try {
-    const sessions = await engine.sessions.list(req.params.id);
+    const sessions = await engine.vault.sessions.list(req.params.id);
     res.json({ sessions });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -175,7 +175,7 @@ app.get("/api/agents/:id/sessions", async (req, res) => {
 /** Get messages and details for a specific session */
 app.get("/api/sessions/:id", async (req, res) => {
   try {
-    const session = await engine.sessions.get(req.params.id);
+    const session = await engine.vault.sessions.get(req.params.id);
     if (!session) {
       res.status(404).json({ error: `Session '${req.params.id}' not found.` });
       return;
@@ -189,7 +189,7 @@ app.get("/api/sessions/:id", async (req, res) => {
 /** Delete a session */
 app.delete("/api/sessions/:id", async (req, res) => {
   try {
-    const success = await engine.sessions.delete(req.params.id);
+    const success = await engine.vault.sessions.delete(req.params.id);
     if (!success) {
       res.status(404).json({ error: `Session '${req.params.id}' not found.` });
       return;

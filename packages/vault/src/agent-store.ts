@@ -1,5 +1,6 @@
-import type { Storage } from "@cobot/vault";
-import type { AgentManifest } from "./types.js";
+import type { SimpleVault } from "./simple-vault.js";
+import type { InodeIndexManager } from "./index-manager.js";
+import type { AgentManifest, Inode } from "./types.js";
 
 const DEFAULT_AGENT_ID = "default";
 
@@ -12,11 +13,10 @@ export const DEFAULT_AGENT_MANIFEST: AgentManifest = {
 };
 
 export class AgentStore {
-  constructor(private readonly vault: Storage) {}
-
-  private getBlobKey(agentId: string): string {
-    return `auth:agents:${agentId}:manifest`;
-  }
+  constructor(
+    private readonly simpleVault: SimpleVault,
+    private readonly indexManager: InodeIndexManager,
+  ) {}
 
   async create(manifest: AgentManifest): Promise<AgentManifest> {
     const id = manifest.id.trim().toLowerCase();
@@ -34,26 +34,26 @@ export class AgentStore {
       updatedAt: now,
     };
 
-    await this.vault.setItem(
-      this.getBlobKey(id),
-      JSON.stringify(data, null, 2),
-    );
+    const inodeId = `agent_${id}_manifest`;
+    await this.simpleVault.write(inodeId, data, {
+      subDir: `agents/${id}`,
+      mimeType: "application/json",
+      metadata: {
+        type: "agent_manifest",
+        agentId: id,
+        name: data.name,
+      },
+    });
+
     return data;
   }
 
   async get(id: string): Promise<AgentManifest | null> {
     const cleanId = id.trim().toLowerCase();
-    const key = this.getBlobKey(cleanId);
+    const inodeId = `agent_${cleanId}_manifest`;
 
     try {
-      const raw = await this.vault.getItem(key);
-      if (!raw) {
-        if (cleanId === DEFAULT_AGENT_ID) {
-          return this.ensureDefaultAgent();
-        }
-        return null;
-      }
-      return JSON.parse(raw) as AgentManifest;
+      return await this.simpleVault.read<AgentManifest>(inodeId);
     } catch {
       if (cleanId === DEFAULT_AGENT_ID) {
         return this.ensureDefaultAgent();
@@ -63,22 +63,25 @@ export class AgentStore {
   }
 
   async list(): Promise<AgentManifest[]> {
-    const keys = await this.vault.getKeys("auth");
-    const manifests: AgentManifest[] = [];
+    await this.indexManager.load();
+    const inodes = this.simpleVault.list({ mimeType: "application/json" });
 
-    for (const key of keys) {
-      if (key.includes(":manifest")) {
-        try {
-          const raw = await this.vault.getItem(key);
-          if (raw) {
-            const parsed = JSON.parse(raw) as AgentManifest;
-            if (parsed && parsed.id) {
-              manifests.push(parsed);
-            }
-          }
-        } catch {
-          // ignore unreadable
+    const manifestInodes = inodes.filter(
+      (inode) =>
+        inode.id.startsWith("agent_") &&
+        inode.id.endsWith("_manifest") &&
+        inode.path.includes("agents/"),
+    );
+
+    const manifests: AgentManifest[] = [];
+    for (const inode of manifestInodes) {
+      try {
+        const item = await this.simpleVault.read<AgentManifest>(inode.id);
+        if (item && item.id) {
+          manifests.push(item);
         }
+      } catch {
+        // Skip unreadable
       }
     }
 
@@ -98,17 +101,17 @@ export class AgentStore {
       throw new Error("The default agent cannot be deleted.");
     }
 
-    return this.vault.removeItem(this.getBlobKey(cleanId));
+    const inodeId = `agent_${cleanId}_manifest`;
+    return this.simpleVault.delete(inodeId);
   }
 
   async ensureDefaultAgent(): Promise<AgentManifest> {
-    const key = this.getBlobKey(DEFAULT_AGENT_ID);
-    const has = await this.vault.hasItem(key);
+    const inodeId = `agent_${DEFAULT_AGENT_ID}_manifest`;
+    const existing = this.simpleVault.stat(inodeId);
 
-    if (has) {
+    if (existing) {
       try {
-        const raw = await this.vault.getItem(key);
-        if (raw) return JSON.parse(raw) as AgentManifest;
+        return await this.simpleVault.read<AgentManifest>(inodeId);
       } catch {
         // Overwrite if corrupt
       }

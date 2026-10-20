@@ -54,10 +54,11 @@ cobot/
 
 ### 4. `packages/vault` (`@cobot/vault`)
 
-- Minimal, crash-resistant, persistent text blob storage engine (vendored & trimmed from `unstorage@0.0.1` by Pooya Parsa / UnJS; not made from scratch by Sruhvx-jpg).
-- **Dual Physical Namespaces**: `public:` (free access) and `auth:` (gated by Backend bridge).
-- **Crash Resistant**: Atomic temp-file writes and filesystem swaps (`rename`).
-- See [`packages/vault/README.md`](./packages/vault/README.md) for architecture and known shared-UID security advisory.
+- General-purpose inode-based storage engine with persistent lookup indexing (`index.json`).
+- **`SimpleVault`**: Unencrypted general-purpose storage (files, JSON, append-only NDJSON/JSONL streams).
+- **`CodeVault`**: Code/passcode-gated encrypted storage (`AES-256-GCM` with `scrypt` key derivation).
+- **`SessionStore`**: Agent turn logs and auto-titling built on top of `SimpleVault`.
+- See [`packages/vault/README.md`](./packages/vault/README.md).
 
 ### 5. `packages/adaptor` (`@cobot/adaptor`)
 

@@ -2,9 +2,7 @@ import { Agent } from "@cobot/agent-core";
 import { streamSimple } from "@earendil-works/pi-ai/compat";
 import { createBaseTools } from "@cobot/tools";
 import { buildAgentPrompt } from "@cobot/agent-prompt";
-import { CobotVault } from "@cobot/vault";
-import { AgentStore, DEFAULT_AGENT_MANIFEST } from "./stores/agent-store.js";
-import { SessionStore } from "./stores/session-store.js";
+import { CobotVault, DEFAULT_AGENT_MANIFEST } from "@cobot/vault";
 import { resolveModel } from "./models/catalog.js";
 import { streamAntigravity } from "./models/antigravity-stream.js";
 import type { AgentRunRequest, AgentDomainEvent } from "@cobot/ts-shared";
@@ -12,18 +10,13 @@ import type { AgentRunRequest, AgentDomainEvent } from "@cobot/ts-shared";
 export class CobotAgentEngine {
   private activeAgents = new Map<string, Agent>();
   public readonly vault: CobotVault;
-  public readonly agents: AgentStore;
-  public readonly sessions: SessionStore;
 
   constructor(vault?: CobotVault) {
     this.vault = vault || new CobotVault();
-    this.agents = new AgentStore(this.vault);
-    this.sessions = new SessionStore(this.vault);
   }
 
   async init(): Promise<void> {
     await this.vault.init();
-    await this.agents.ensureDefaultAgent();
   }
 
   steer(sessionId: string, message: string): boolean {
@@ -48,7 +41,7 @@ export class CobotAgentEngine {
     const tools = createBaseTools(cwd);
 
     // 1. Resolve agent manifest from vault
-    let manifest = await this.agents.get(agentId);
+    let manifest = await this.vault.agents.get(agentId);
     if (!manifest) {
       manifest = DEFAULT_AGENT_MANIFEST;
     }
@@ -64,7 +57,7 @@ export class CobotAgentEngine {
     });
 
     // 3. Re-hydrate past turns from session storage
-    const sessionData = await this.sessions.get(sessionId);
+    const sessionData = await this.vault.sessions.get(sessionId);
     const priorAgentMessages: any[] = [];
     if (sessionData && sessionData.messages.length > 0) {
       for (const m of sessionData.messages) {
@@ -124,7 +117,7 @@ export class CobotAgentEngine {
     }
 
     // Record incoming user prompt in session
-    await this.sessions.appendMessage(
+    await this.vault.sessions.appendMessage(
       sessionId,
       {
         id: `msg_user_${Date.now()}`,
@@ -229,7 +222,7 @@ export class CobotAgentEngine {
         assistantText.trim().length > 0 ||
         assistantReasoning.trim().length > 0
       ) {
-        await this.sessions.appendMessage(
+        await this.vault.sessions.appendMessage(
           sessionId,
           {
             id: `msg_asst_${Date.now()}`,
