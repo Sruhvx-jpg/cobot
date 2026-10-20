@@ -82,5 +82,13 @@ await vault.removeItem("public:welcome-banner");
 
 * **Open / Deferred Vectors**: In addition to the shared-UID process boundary above, there are further agent-read-related security issues and threat vectors that were noted during design discussions but are currently unaddressed here (to be recalled, thoroughly cataloged, and tackled in upcoming security hardening rounds).
 
+### ⚠️ Agent Access Control & Capability Dilemma (Architectural Note)
+
+* **Design Context & Open Challenge**:
+  > *"So far a lot of problems have come to mind, mainly related to agent access control and beyond. These vectors are acknowledged as open design challenges that exceed a simple in-process blob store and require a collaborative, multi-layer systems security architecture."*
+* **The Core Paradox**: Autonomous agents require native access to host toolchains (`bash`, compilers, language servers, filesystems) to be effective engineers. Restricting access purely at the application layer is fragile against a shell tool, yet heavy-handed jailing destroys developer ergonomics.
+* **Way Forward**: Full agent access control cannot be solved inside a single package or by one developer in a silo. It is an industry-wide open problem requiring defense-in-depth: kernel UID separation, capability-based broker tokens, and progressive permission escalation. This will be architected step-by-step in dedicated security milestones.
+
+
 
 
