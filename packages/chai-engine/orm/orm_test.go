@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/Sruhvx-jpg/cobot/packages/sabha-db/orm"
 	"github.com/chaisql/chai"
+	"github.com/chaisql/chai/orm"
 	"github.com/stretchr/testify/require"
 )
 

@@ -3,9 +3,9 @@ package sabhadb
 import (
 	"database/sql"
 
-	"github.com/Sruhvx-jpg/cobot/packages/sabha-db/orm"
 	"github.com/Sruhvx-jpg/cobot/packages/sabha-db/schema"
 	"github.com/chaisql/chai"
+	"github.com/chaisql/chai/orm"
 )
 
 // DB wraps orm.DB with Sabha-specific methods.
