@@ -1,5 +1,5 @@
 {
-  "name": "@cobot/agent-house",
+  "name": "@cobot/sabha",
   "private": true,
   "scripts": {
     "build": "cd src && go build ./...",

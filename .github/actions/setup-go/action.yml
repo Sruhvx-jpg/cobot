@@ -18,4 +18,4 @@ runs:
         cache-dependency-path: |
           go.work
           apps/tracer-duty/src/go.mod
-          apps/agent-house/src/go.mod
+          apps/sabha/src/go.mod

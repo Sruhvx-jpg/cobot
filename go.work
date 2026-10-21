@@ -1,8 +1,8 @@
 go 1.27.0
 
 use (
-	./apps/agent-house/src
+	./apps/sabha/src
 	./apps/tracer-duty/src
 	./packages/chai-engine
-	./packages/go-shared
+	./packages/sabha-db
 )

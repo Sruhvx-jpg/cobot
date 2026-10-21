@@ -1,8 +1,8 @@
 {
-  "name": "@cobot/go-shared",
+  "name": "@cobot/sabha-db",
   "version": "0.1.0",
   "private": true,
-  "description": "Shared Go domain models, database abstractions, and agent-house components",
+  "description": "Dedicated database package for Sabha schemas, models, and migrations",
   "scripts": {
     "build": "go build ./...",
     "check-types": "go vet ./...",

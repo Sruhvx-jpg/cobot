@@ -84,25 +84,25 @@ jobs:
 
       - name: Verify Code Formatting (gofmt)
         run: |
-          UNFORMATTED=$(gofmt -l apps/tracer-duty/src apps/agent-house/src || true)
+          UNFORMATTED=$(gofmt -l apps/tracer-duty/src apps/sabha/src || true)
           if [ -n "$UNFORMATTED" ]; then
             echo "Unformatted files: $UNFORMATTED"
             exit 1
           fi
 
       - name: Go Vet Compiler Checks
-        run: go vet ./apps/tracer-duty/src/... ./apps/agent-house/src/...
+        run: go vet ./apps/tracer-duty/src/... ./apps/sabha/src/...
 
       - name: Build TracerDuty Microservice
         run: cd apps/tracer-duty/src && go build -v ./...
 
       - name: Build AgentHouse Microservice
-        run: cd apps/agent-house/src && go build -v ./...
+        run: cd apps/sabha/src && go build -v ./...
 
       - name: Run Tests with Race Detector
         run: |
           cd apps/tracer-duty/src && go test -race -v ./... || true
-          cd ../../agent-house/src && go test -race -v ./... || true
+          cd ../../sabha/src && go test -race -v ./... || true
 
       - name: Test Chai Engine (Core SQL)
         run: cd packages/chai-engine && go test -v .
@@ -111,7 +111,7 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.64
-          args: ./apps/tracer-duty/src/... ./apps/agent-house/src/...
+          args: ./apps/tracer-duty/src/... ./apps/sabha/src/...
 
       - name: Run govulncheck on TracerDuty
         uses: golang/govulncheck-action@v1
@@ -121,7 +121,7 @@ jobs:
       - name: Run govulncheck on AgentHouse
         uses: golang/govulncheck-action@v1
         with:
-          work-dir: apps/agent-house/src
+          work-dir: apps/sabha/src
 
   # In-Process Vector Engine & Adapter Verification (Chroma Rust Core)
   chroma-engine:
