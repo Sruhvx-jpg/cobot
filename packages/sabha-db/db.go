@@ -3,14 +3,20 @@ package sabhadb
 import (
 	"database/sql"
 
-	"github.com/chaisql/chai"
+	"github.com/Sruhvx-jpg/cobot/packages/sabha-db/orm"
 	"github.com/Sruhvx-jpg/cobot/packages/sabha-db/schema"
+	"github.com/chaisql/chai"
 )
 
+// DB wraps orm.DB with Sabha-specific methods.
+type DB struct {
+	*orm.DB
+}
+
 // Migrate runs reflection-based ChaiSQL schema migrations for all Sabha models.
-func Migrate(db *sql.DB) error {
+func Migrate(rawDB *sql.DB) error {
 	return chai.AutoMigrate(
-		db,
+		rawDB,
 		&schema.Server{},
 		&schema.Channel{},
 		&schema.Message{},
@@ -19,17 +25,17 @@ func Migrate(db *sql.DB) error {
 	)
 }
 
-// Open opens an embedded Chai database at path and automatically runs migrations.
-func Open(path string) (*sql.DB, error) {
-	db, err := sql.Open("chai", path)
+// Open opens an embedded Chai database at path, runs migrations, and returns an ORM handle.
+func Open(path string) (*DB, error) {
+	rawDB, err := sql.Open("chai", path)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := Migrate(db); err != nil {
-		db.Close()
+	if err := Migrate(rawDB); err != nil {
+		rawDB.Close()
 		return nil, err
 	}
 
-	return db, nil
+	return &DB{DB: orm.NewDB(rawDB)}, nil
 }

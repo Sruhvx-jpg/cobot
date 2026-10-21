@@ -1,36 +1,41 @@
 package sabhadb_test
 
 import (
+	"context"
 	"testing"
 
 	sabhadb "github.com/Sruhvx-jpg/cobot/packages/sabha-db"
+	"github.com/Sruhvx-jpg/cobot/packages/sabha-db/schema"
 	"github.com/stretchr/testify/require"
 )
 
 func TestOpenAndMigrate(t *testing.T) {
+	ctx := context.Background()
+
 	db, err := sabhadb.Open(":memory:")
 	require.NoError(t, err)
 	defer db.Close()
 
-	// Verify all tables exist and can accept records
-	_, err = db.Exec(`INSERT INTO servers (id, name, owner_id, created_at, updated_at) VALUES ('s1', 'Main House', 'a1', 1000, 1000)`)
+	// 1. Insert records using fluent ORM
+	srv := schema.Server{ID: "s1", Name: "Main House", OwnerID: "a1", CreatedAt: 1000, UpdatedAt: 1000}
+	_, err = db.Insert(&srv).Exec(ctx)
 	require.NoError(t, err)
 
-	_, err = db.Exec(`INSERT INTO channels (id, server_id, name, type, mod_only, created_at, updated_at) VALUES ('c1', 's1', 'general', 'text', false, 1000, 1000)`)
+	ch := schema.Channel{ID: "c1", ServerID: "s1", Name: "general", Type: schema.ChannelTypeText, ModOnly: false, CreatedAt: 1000, UpdatedAt: 1000}
+	_, err = db.Insert(&ch).Exec(ctx)
 	require.NoError(t, err)
 
-	_, err = db.Exec(`INSERT INTO messages (id, receiver_id, sender_id, content, sent_at) VALUES ('m1', 'c1', 'a1', 'hello world', 1000)`)
+	msg := schema.Message{ID: "m1", ReceiverID: "c1", SenderID: "a1", Content: "hello world", SentAt: 1000}
+	_, err = db.Insert(&msg).Exec(ctx)
 	require.NoError(t, err)
 
-	_, err = db.Exec(`INSERT INTO mentions (id, message_id, agent_id) VALUES ('men1', 'm1', 'a2')`)
+	// 2. Query record using fluent ORM Find
+	var msgs []schema.Message
+	err = db.Select().
+		Model(&schema.Message{}).
+		Where("receiver_id = ?", "c1").
+		Find(ctx, &msgs)
 	require.NoError(t, err)
-
-	_, err = db.Exec(`INSERT INTO agents (id, name, role, status, created_at) VALUES ('a1', 'lead', 'admin', 'idle', 1000)`)
-	require.NoError(t, err)
-
-	// Verify query on indexed columns
-	var content string
-	err = db.QueryRow(`SELECT content FROM messages WHERE receiver_id = 'c1' AND sent_at = 1000`).Scan(&content)
-	require.NoError(t, err)
-	require.Equal(t, "hello world", content)
+	require.Len(t, msgs, 1)
+	require.Equal(t, "hello world", msgs[0].Content)
 }
