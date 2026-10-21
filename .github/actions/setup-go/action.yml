@@ -19,3 +19,5 @@ runs:
           go.work
           apps/tracer-duty/src/go.mod
           apps/sabha/src/go.mod
+          packages/chai-engine/go.mod
+          packages/sabha-db/go.mod

@@ -1,6 +1,6 @@
 module github.com/Sruhvx-jpg/cobot/packages/sabha-db
 
-go 1.27.0
+go 1.24
 
 require (
 	github.com/chaisql/chai v0.18.0
