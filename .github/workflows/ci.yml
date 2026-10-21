@@ -23,6 +23,11 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-env
 
+      - name: Setup Go Environment
+        uses: ./.github/actions/setup-go
+        with:
+          go-version: "1.24"
+
       - name: Validate Conventional Commits
         if: github.event_name == 'pull_request'
         shell: bash

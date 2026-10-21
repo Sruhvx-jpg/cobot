@@ -1,11 +1,13 @@
 module github.com/Sruhvx-jpg/cobot/packages/sabha-db
 
-go 1.24
+go 1.24.0
 
 require (
 	github.com/chaisql/chai v0.18.0
 	github.com/stretchr/testify v1.12.1
 )
+
+replace github.com/chaisql/chai => ../chai-engine
 
 require (
 	github.com/DataDog/zstd v1.5.7 // indirect
@@ -19,7 +21,7 @@ require (
 	github.com/cockroachdb/logtags v0.0.0-20241215232642-bb51bb14a506 // indirect
 	github.com/cockroachdb/pebble/v2 v2.1.0 // indirect
 	github.com/cockroachdb/redact v1.1.6 // indirect
-	github.com/cockroachdb/swiss v0.0.0-20250624142022-d6e517c1d961 // indirect
+	github.com/cockroachdb/swiss v0.0.0-20260820225851-333444432258 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20250429170803-42689b6311bb // indirect
 	github.com/dromara/carbon/v2 v2.6.11 // indirect
 	github.com/getsentry/sentry-go v0.35.1 // indirect

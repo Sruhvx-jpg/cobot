@@ -1,6 +1,6 @@
 module github.com/chaisql/chai/sqltests
 
-go 1.25
+go 1.24
 
 require (
 	github.com/chaisql/chai v0.19.0
