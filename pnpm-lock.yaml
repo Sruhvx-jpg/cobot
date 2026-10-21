@@ -159,6 +159,8 @@ importers:
 
   packages/chroma-engine: {}
 
+  packages/go-shared: {}
+
   packages/tools:
     dependencies:
       '@cobot/agent-core':
