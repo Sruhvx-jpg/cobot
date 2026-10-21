@@ -150,6 +150,10 @@ func (p *Parser) parseProjectedExpr() (expr.Expr, error) {
 		return nil, err
 	}
 
+	if c, ok := pe.(*expr.Column); ok && c.Name == "*" {
+		return expr.Wildcard{}, nil
+	}
+
 	ne := &expr.NamedExpr{Expr: pe}
 
 	// Check if the AS token exists.
@@ -179,6 +183,21 @@ func (p *Parser) parseFrom() (string, error) {
 		pErr := errors.Unwrap(err).(*ParseError)
 		pErr.Expected = []string{"table_name"}
 		return ident, pErr
+	}
+
+	// Consume optional AS alias or bare table alias (e.g. FROM users AS u, or FROM users u)
+	if ok, err := p.parseOptional(scanner.AS); err == nil && ok {
+		_, err = p.parseIdent()
+		if err != nil {
+			return ident, err
+		}
+	} else {
+		tok, _, _ := p.ScanIgnoreWhitespace()
+		if tok == scanner.IDENT {
+			// table alias consumed
+		} else {
+			p.Unscan()
+		}
 	}
 
 	return ident, nil

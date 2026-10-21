@@ -418,13 +418,29 @@ func (p *Parser) parseType() (types.Type, error) {
 	return 0, newParseError(scanner.Tokstr(tok, lit), []string{"type"}, pos)
 }
 
-// parsePath parses a path to a specific value.
+// parseColumn parses a column name, optionally qualified with a table name (table.column).
 func (p *Parser) parseColumn() (*expr.Column, error) {
 	// parse first mandatory ident
 	col, err := p.parseIdent()
 	if err != nil {
 		return nil, err
 	}
+
+	// Check if the next token is a dot '.' (e.g. table.column or "table"."column")
+	if tok, _, _ := p.ScanIgnoreWhitespace(); tok == scanner.DOT {
+		tok2, _, _ := p.ScanIgnoreWhitespace()
+		if tok2 == scanner.MUL {
+			return &expr.Column{Table: col, Name: "*"}, nil
+		}
+		p.Unscan()
+
+		second, err := p.parseIdent()
+		if err != nil {
+			return nil, err
+		}
+		return &expr.Column{Table: col, Name: second}, nil
+	}
+	p.Unscan()
 
 	return &expr.Column{Name: col}, nil
 }

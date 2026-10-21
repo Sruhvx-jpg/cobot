@@ -379,3 +379,77 @@ func BenchmarkOrderBy(b *testing.B) {
 		}
 	}
 }
+
+func TestTablePrefixedColumns(t *testing.T) {
+	db, err := sql.Open("chai", ":memory:")
+	require.NoError(t, err)
+	defer db.Close()
+
+	_, err = db.Exec(`
+		CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER);
+		INSERT INTO users (id, name, age) VALUES (1, 'alice', 20), (2, 'bob', 30);
+	`)
+	require.NoError(t, err)
+
+	t.Run("bare table prefix", func(t *testing.T) {
+		row := db.QueryRow("SELECT users.id, users.name, users.age FROM users WHERE users.id = 1")
+		var id, age int
+		var name string
+		err := row.Scan(&id, &name, &age)
+		require.NoError(t, err)
+		require.Equal(t, 1, id)
+		require.Equal(t, "alice", name)
+		require.Equal(t, 20, age)
+	})
+
+	t.Run("quoted table and column prefix", func(t *testing.T) {
+		row := db.QueryRow(`SELECT "users"."id", "users"."name" FROM "users" WHERE "users"."name" = 'bob'`)
+		var id int
+		var name string
+		err := row.Scan(&id, &name)
+		require.NoError(t, err)
+		require.Equal(t, 2, id)
+		require.Equal(t, "bob", name)
+	})
+
+	t.Run("table alias with AS", func(t *testing.T) {
+		row := db.QueryRow(`SELECT u.id, u.name FROM users AS u WHERE u.age = 30`)
+		var id int
+		var name string
+		err := row.Scan(&id, &name)
+		require.NoError(t, err)
+		require.Equal(t, 2, id)
+		require.Equal(t, "bob", name)
+	})
+
+	t.Run("table wildcard", func(t *testing.T) {
+		row := db.QueryRow(`SELECT users.* FROM users WHERE users.id = 1`)
+		var id, age int
+		var name string
+		err := row.Scan(&id, &name, &age)
+		require.NoError(t, err)
+		require.Equal(t, 1, id)
+		require.Equal(t, "alice", name)
+		require.Equal(t, 20, age)
+	})
+
+	t.Run("update with prefixed column in WHERE", func(t *testing.T) {
+		_, err := db.Exec(`UPDATE users SET name = 'alicia' WHERE users.id = 1`)
+		require.NoError(t, err)
+
+		row := db.QueryRow(`SELECT name FROM users WHERE id = 1`)
+		var name string
+		require.NoError(t, row.Scan(&name))
+		require.Equal(t, "alicia", name)
+	})
+
+	t.Run("delete with prefixed column in WHERE", func(t *testing.T) {
+		_, err := db.Exec(`DELETE FROM users WHERE users.id = 2`)
+		require.NoError(t, err)
+
+		row := db.QueryRow(`SELECT count(*) FROM users`)
+		var count int
+		require.NoError(t, row.Scan(&count))
+		require.Equal(t, 1, count)
+	})
+}
