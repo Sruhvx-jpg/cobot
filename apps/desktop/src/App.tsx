@@ -94,6 +94,15 @@ export const App: React.FC = () => {
   };
 
   const handleSteer = async (message: string) => {
+    updateSessionMessages(activeSession.id, (prev) => [
+      ...prev,
+      {
+        id: `msg_steer_${Date.now()}`,
+        role: "user",
+        content: `[Steered]: ${message}`,
+        timestamp: Date.now(),
+      },
+    ]);
     await steerActiveSession(activeSession.id, message);
   };
 

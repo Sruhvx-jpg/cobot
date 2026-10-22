@@ -23,11 +23,25 @@ export class CobotAgentEngine {
   steer(sessionId: string, message: string): boolean {
     const agent = this.activeAgents.get(sessionId);
     if (!agent) return false;
+    const now = Date.now();
     agent.steer({
       role: "user",
       content: [{ type: "text", text: message }],
-      timestamp: Date.now(),
+      timestamp: now,
     });
+    this.vault.sessions
+      .appendMessage(sessionId, {
+        id: `msg_steer_${now}`,
+        role: "user",
+        content: `[Steered]: ${message}`,
+        timestamp: now,
+      })
+      .catch((err) =>
+        console.error(
+          "[Engine] Failed to append steered message:",
+          err.message,
+        ),
+      );
     return true;
   }
 

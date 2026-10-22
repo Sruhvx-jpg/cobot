@@ -564,7 +564,11 @@ export class Agent {
         }
         return this.steeringQueue.drain();
       },
-      getFollowUpMessages: async () => this.followUpQueue.drain(),
+      getFollowUpMessages: async () => {
+        const followUps = this.followUpQueue.drain();
+        if (followUps.length > 0) return followUps;
+        return this.steeringQueue.drain();
+      },
     };
   }
 

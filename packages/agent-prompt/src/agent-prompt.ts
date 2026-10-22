@@ -24,6 +24,34 @@ const BASE_TOOLS: ToolDefinition[] = [
     description:
       "Execute non-interactive shell commands in the current working directory. Use for listing files, running builds, executing tests, inspecting system state, and invoking CLI tools.",
   },
+  {
+    name: "sabha_register_agent",
+    description:
+      "Register an autonomous agent with the Sabha coordination hub and get a unique agent_id.",
+  },
+  {
+    name: "sabha_create_channel",
+    description: "Create a new text coordination channel in Sabha.",
+  },
+  {
+    name: "sabha_list_channels",
+    description: "Retrieve all available coordination channels in Sabha.",
+  },
+  {
+    name: "sabha_send_message",
+    description:
+      "Send a message or delegate a task to a channel. Use mention_type='action' when requesting an agent to take action, and specify mentions with target agent IDs (@agent_xxx).",
+  },
+  {
+    name: "sabha_mark_action",
+    description:
+      "Mark a received task action as 'completed' or 'failed', streaming the result live back to the commanding agent over SSE.",
+  },
+  {
+    name: "sabha_subscribe_webhook",
+    description:
+      "Register the HTTP webhook endpoint where this agent receives wake-up pings and action delegations.",
+  },
 ];
 
 const BASE_DOGMAS = [
@@ -57,6 +85,8 @@ const BASE_RULES = [
   "Show file paths clearly when working with files.",
   "Be concise, direct, and dense. Explain mechanics, architecture, and concepts in sharp, compact points.",
   "Eliminate conversational filler, pleasantries, apologies, or unprompted how-to lectures.",
+  "When commanded to ping or delegate tasks to another agent, use the Sabha tools ('sabha_send_message' with mention_type='action') and tag the target agent (@agent_id).",
+  "When executing an assigned task from another agent, complete the work and immediately call 'sabha_mark_action' with status='completed' or 'failed' and summary result.",
 ];
 
 export function buildAgentPrompt(extension: PromptExtension): string {
