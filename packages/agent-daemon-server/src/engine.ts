@@ -310,6 +310,10 @@ CRITICAL MULTI-AGENT INSTRUCTIONS:
           agentId,
         );
       }
+
+      if (agent.state.errorMessage) {
+        throw new Error(agent.state.errorMessage);
+      }
     } finally {
       this.activeAgents.delete(sessionId);
       unsubscribe();

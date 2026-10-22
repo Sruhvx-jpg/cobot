@@ -18,6 +18,7 @@ export interface ChatMessage {
   content: string;
   reasoning?: string;
   tools?: ToolCall[];
+  error?: string;
   timestamp: number;
 }
 

@@ -25,30 +25,30 @@ export const SteerInput: React.FC<SteerInputProps> = ({
 
   return (
     <form
-      className="flex items-center gap-2 px-3 py-1.5 border border-[var(--border)] hover:border-[var(--border-hover)] smooth-corners-sm bg-transparent transition-colors max-w-3xl mx-auto w-full mb-2"
+      className="flex items-center gap-3 px-4 py-3 border border-[var(--border)] hover:border-[var(--border-hover)] focus-within:border-[var(--border-focus)] smooth-corners-lg bg-[var(--bg-card)]/50 backdrop-blur-xs transition-all max-w-5xl mx-auto w-full shadow-sm"
       onSubmit={handleSubmit}
     >
       <Compass
-        size={14}
+        size={16}
         className="text-[var(--text-muted)] flex-shrink-0 animate-spin [animation-duration:8s]"
       />
       <input
         type="text"
-        className="flex-1 bg-transparent border-none text-xs text-[var(--text-main)] outline-none placeholder:text-[var(--text-subtle)]"
-        placeholder="Steer active agent run (inject instruction mid-turn)..."
+        className="flex-1 bg-transparent border-none text-sm text-[var(--text-main)] outline-none placeholder:text-[var(--text-subtle)] leading-relaxed"
+        placeholder="Steer active agent run (inject mid-turn instruction or course-correct)..."
         value={text}
         onChange={(e) => setText(e.target.value)}
         disabled={disabled}
       />
       <button
         type="submit"
-        className="flex items-center gap-1 px-2.5 py-1 bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--border-hover)] smooth-corners-sm text-[10px] font-bold text-[var(--text-main)] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--border-hover)] smooth-corners-sm text-xs font-semibold text-[var(--text-main)] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-all"
         disabled={!text.trim() || disabled}
       >
         {steeredFeedback ? (
           <>
-            <Check size={11} />
-            <span>STEERED</span>
+            <Check size={13} className="text-emerald-400" />
+            <span className="text-emerald-400">STEERED</span>
           </>
         ) : (
           <span>STEER</span>

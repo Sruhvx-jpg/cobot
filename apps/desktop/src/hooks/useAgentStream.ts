@@ -138,12 +138,16 @@ export function useAgentStream(
           }
 
           case "RUN_ERROR": {
+            const errorMsg =
+              typeof event.message === "string"
+                ? event.message
+                : "AI provider failed to generate a response.";
             updateMessages(sessionId, (prev) =>
               prev.map((msg) =>
                 msg.id === assistantMessageId
                   ? {
                       ...msg,
-                      content: msg.content + `\n[Error: ${event.message}]`,
+                      error: errorMsg,
                     }
                   : msg,
               ),
@@ -207,14 +211,13 @@ export function useAgentStream(
       }
     } catch (err) {
       if ((err as Error).name !== "AbortError") {
+        const errorMsg = (err as Error).message || "Connection to daemon lost.";
         updateMessages(sessionId, (prev) =>
           prev.map((msg) =>
             msg.id === assistantMessageId
               ? {
                   ...msg,
-                  content:
-                    msg.content +
-                    `\n[Connection Error: ${(err as Error).message}]`,
+                  error: errorMsg,
                 }
               : msg,
           ),
