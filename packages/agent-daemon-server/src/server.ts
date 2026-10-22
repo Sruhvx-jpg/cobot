@@ -36,6 +36,38 @@ export async function createDaemonServer(
   // Initialize vault and default agents
   await engine.init();
 
+  // Auto-register vault agents with Sabha and subscribe their wake-up webhooks
+  const sabhaUrl = process.env.SABHA_URL || "http://localhost:8080";
+  const syncAgentsWithSabha = async () => {
+    try {
+      const agents = await engine.vault.agents.list();
+      for (const a of agents) {
+        await fetch(`${sabhaUrl}/agents/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: a.name || a.id, role: a.id }),
+        }).catch(() => {});
+
+        await fetch(`${sabhaUrl}/webhooks/subscribe`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agent_id: a.id,
+            webhook_url: `http://localhost:${port}/api/agents/${a.id}/wake`,
+          }),
+        }).catch(() => {});
+      }
+      console.log(
+        `[Sabha Sync] Successfully synced ${agents.length} vault agents with Sabha at ${sabhaUrl}`,
+      );
+    } catch {
+      // Ignore if Sabha is still booting
+    }
+  };
+
+  syncAgentsWithSabha();
+  setTimeout(syncAgentsWithSabha, 3000);
+
   app.get("/health", (_req, res) => {
     res.json({ status: "ok", service: "cobot-backend", protocol: "ag-ui" });
   });

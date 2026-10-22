@@ -94,7 +94,7 @@ func TestCreateAndListChannels(t *testing.T) {
 
 	var channels []schema.Channel
 	require.NoError(t, json.Unmarshal(listRec.Body.Bytes(), &channels))
-	require.Len(t, channels, 1)
+	require.Len(t, channels, 2) // chan_general (auto-seeded) + dev-channel
 	require.Equal(t, ch.ID, channels[0].ID)
 }
 

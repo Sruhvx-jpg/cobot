@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -284,6 +285,7 @@ func dispatchWebhooks(registry *sync.Map, mentions []schema.Mention, msg schema.
 	for _, m := range mentions {
 		urlVal, ok := registry.Load(m.AgentID)
 		if !ok {
+			fmt.Printf("[Sabha Webhook] Notice: Target agent %q has no registered webhook URL. Mention stored in DB.\n", m.AgentID)
 			continue
 		}
 		targetURL, ok := urlVal.(string)
@@ -312,6 +314,8 @@ func dispatchWebhooks(registry *sync.Map, mentions []schema.Mention, msg schema.
 		if err != nil {
 			continue
 		}
+
+		fmt.Printf("[Sabha Webhook] Dispatching %s webhook for agent %q to %s (mention: %s)\n", m.Type, m.AgentID, targetURL, m.ID)
 
 		go func(url string, data []byte) {
 			req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, bytes.NewReader(data))
@@ -459,4 +463,64 @@ func HandleMarkMentionAction(db *sabhadb.DB, registry *sync.Map, broker *EventBr
 		"action_status": status,
 		"action_at":     now,
 	})
+}
+
+// HandleGetChannelMessages implements windowed message hydration for a channel.
+func HandleGetChannelMessages(db *sabhadb.DB, w http.ResponseWriter, r *http.Request) {
+	channelID := chi.URLParam(r, "channelID")
+	if channelID == "" {
+		WriteAPIError(w, BadReq("channelID is required"))
+		return
+	}
+
+	limit := 20
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
+			limit = parsed
+		}
+	}
+
+	query := db.Select().
+		Model(&schema.Message{}).
+		Where("receiver_id = ?", channelID)
+
+	if before := r.URL.Query().Get("before"); before != "" {
+		if ts, err := strconv.ParseInt(before, 10, 64); err == nil {
+			query.Where("sent_at < ?", ts)
+		}
+	}
+
+	if senderID := r.URL.Query().Get("sender_id"); senderID != "" {
+		query.Where("sender_id = ?", senderID)
+	}
+
+	if since := r.URL.Query().Get("since"); since != "" {
+		if ts, err := strconv.ParseInt(since, 10, 64); err == nil {
+			query.Where("sent_at >= ?", ts)
+		}
+	}
+
+	if until := r.URL.Query().Get("until"); until != "" {
+		if ts, err := strconv.ParseInt(until, 10, 64); err == nil {
+			query.Where("sent_at <= ?", ts)
+		}
+	}
+
+	var messages []schema.Message
+	err := query.
+		OrderBy("sent_at DESC").
+		Limit(limit).
+		Find(r.Context(), &messages)
+
+	if err != nil {
+		WriteAPIError(w, InternalErr("failed to query messages").Wrap(err))
+		return
+	}
+
+	// Reverse to return chronological order (oldest -> newest in window)
+	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
+		messages[i], messages[j] = messages[j], messages[i]
+	}
+
+	WriteJSON(w, http.StatusOK, messages)
 }

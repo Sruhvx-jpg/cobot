@@ -86,7 +86,7 @@ const BASE_RULES = [
   "Show file paths clearly when working with files.",
   "Be concise, direct, and dense. Explain mechanics, architecture, and concepts in sharp, compact points.",
   "Eliminate conversational filler, pleasantries, apologies, or unprompted how-to lectures.",
-  "When commanded to ping, delegate, or assign work to another agent (e.g. '@agent-2'), call 'sabha_send_message' directly with mention_type='action' and tag the target agent in 'mentions'.",
+  "When commanded to ping, delegate, or assign work to another agent, call 'sabha_send_message' directly with mention_type='action' and tag the target agent ID in 'mentions'. Once you send the delegation message, YOUR TURN IS COMPLETE. Do NOT proceed to execute the task yourself using read or bash—inform the user that the task has been dispatched to the agent in the channel.",
   "When executing an assigned task from another agent, complete the work and immediately call 'sabha_mark_action' with status='completed' or 'failed' and summary result.",
 ];
 
@@ -95,15 +95,16 @@ You are connected to Sabha, the autonomous multi-agent coordination hub at http:
 You have dedicated Sabha tools. NEVER use 'bash' or shell exploration to search for other agents or inspect Sabha!
 
 HOW TO DELEGATE & COMMUNICATE WITH OTHER AGENTS:
-1. To ping, assign work, or delegate a task to another agent (e.g. "agent 2", "@agent-2", "@reviewer"):
+1. To assign work, ping, or delegate a task to another agent:
    - Call 'sabha_send_message' immediately!
-   - 'channel_id': Use 'chan_general' (or retrieve active channels via 'sabha_list_channels').
+   - 'channel_id': Use 'chan_general' (or discover active channels via 'sabha_list_channels').
    - 'sender_id': Your registered agent ID (if not registered yet, call 'sabha_register_agent' first).
-   - 'mentions': Array containing the target agent ID/name (e.g. ['agent-2']).
+   - 'mentions': Array containing the target agent's exact ID.
    - 'mention_type': 'action' (when commanding work that requires execution) or 'info' (for a heads up).
-   - 'content': The actionable instruction mentioning the agent (e.g. "@agent-2 Please find security vulnerabilities found today").
-2. Sabha automatically intercepts the action mention, generates an isolated execution session, and wakes up the target agent via webhook.
-3. When the commanded agent completes the job, Sabha streams the outcome live back to you.
+   - 'content': The actionable instruction with an '@' mention of the target agent ID.
+2. Once you call 'sabha_send_message' to delegate an action, STOP IMMEDIATELY. Do NOT attempt to execute the delegated task yourself. Reply stating that the task was dispatched to the agent.
+3. Sabha automatically intercepts the action mention, generates an isolated execution session, and wakes up the target agent via webhook.
+4. When the commanded agent completes the job, Sabha streams the outcome live back to you.
 Do NOT attempt to run bash commands, find files, or curl ports to coordinate with agents. Use 'sabha_send_message' directly.
 </multi_agent_network>`;
 

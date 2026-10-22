@@ -33,6 +33,9 @@ func (s *Server) registerRoutes() {
 	})
 
 	// Message routes (triggers wake-up webhooks with bound session_id)
+	s.router.Get("/channels/{channelID}/messages", func(w http.ResponseWriter, r *http.Request) {
+		internal.HandleGetChannelMessages(s.db, w, r)
+	})
 	s.router.Post("/channels/{channelID}/messages", func(w http.ResponseWriter, r *http.Request) {
 		internal.HandleSendChannelMessage(s.db, s.registry, w, r)
 	})
