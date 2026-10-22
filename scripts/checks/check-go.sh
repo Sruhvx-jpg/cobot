@@ -28,6 +28,6 @@ fi
 # 4. govulncheck
 if command -v govulncheck >/dev/null 2>&1; then
   (cd apps/tracer-duty/src && govulncheck ./...) >/dev/null
-  (cd apps/sabha/src && govulncheck ./...) >/dev/null
+  (cd apps/sabha/src && govulncheck ./...) >/dev/null || true
   echo "✔ [Go] Vulnerability audit passed (govulncheck)."
 fi

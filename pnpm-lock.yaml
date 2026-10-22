@@ -161,6 +161,8 @@ importers:
 
   packages/sabha-db: {}
 
+  packages/sabha-server: {}
+
   packages/tools:
     dependencies:
       '@cobot/agent-core':

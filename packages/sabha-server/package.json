@@ -1,0 +1,11 @@
+{
+  "name": "@cobot/sabha-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Central router, HTTP API handlers, and webhook dispatcher for Sabha",
+  "scripts": {
+    "build": "go build ./...",
+    "check-types": "go vet ./...",
+    "test:go": "go test ./..."
+  }
+}
