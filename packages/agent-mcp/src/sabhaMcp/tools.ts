@@ -36,7 +36,8 @@ export const SendMessageSchema = Type.Object({
     }),
   ),
   mention_type: Type.Optional(
-    Type.Union([Type.Literal("info"), Type.Literal("action")], {
+    Type.String({
+      enum: ["info", "action"],
       description: "Intent: 'info' (notice only) or 'action' (task required)",
     }),
   ),
@@ -44,7 +45,8 @@ export const SendMessageSchema = Type.Object({
 
 export const MarkActionSchema = Type.Object({
   mention_id: Type.String({ description: "ID of the mention/task" }),
-  status: Type.Union([Type.Literal("completed"), Type.Literal("failed")], {
+  status: Type.String({
+    enum: ["completed", "failed"],
     description: "Outcome of the action",
   }),
   session_id: Type.Optional(

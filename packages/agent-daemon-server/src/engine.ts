@@ -79,10 +79,11 @@ export class CobotAgentEngine {
       }
     }
 
-    // 4. Resolve model dynamically based on auth status
+    // 4. Resolve model dynamically based on auth status and thinking level
     const { model, isAntigravity, apiKey, headers } = await resolveModel(
       request.provider,
       request.modelName,
+      request.thinkingLevel,
     );
 
     const streamFn = isAntigravity
@@ -199,6 +200,23 @@ export class CobotAgentEngine {
           break;
 
         case "turn_end":
+          if (
+            event.message.role === "assistant" &&
+            event.message.stopReason === "error" &&
+            event.message.errorMessage
+          ) {
+            const errText = `\n\n⚠️ ${event.message.errorMessage}`;
+            assistantText += errText;
+            onEvent({
+              type: "text_delta",
+              data: {
+                delta: errText,
+                sessionId,
+                agentId,
+              },
+              timestamp,
+            });
+          }
           onEvent({
             type: "turn_end",
             data: { message: event.message, sessionId, agentId },

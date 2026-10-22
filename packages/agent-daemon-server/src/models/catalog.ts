@@ -10,11 +10,19 @@ export interface ModelDescriptor {
   id: string;
   provider: string;
   label: string;
+  variants?: Record<string, string>; // e.g. low -> "gemini-3.8-flash-low"
 }
+
+// In-memory model variant registry mapping base clean models to tiered IDs
+const modelVariantMap = new Map<string, Record<string, string>>();
 
 export async function getAvailableModels(): Promise<ModelDescriptor[]> {
   const auth = await getStoredAuth();
   const models: ModelDescriptor[] = [];
+  const groupedAntigravity = new Map<
+    string,
+    { label: string; variants: Record<string, string>; defaultId: string }
+  >();
 
   // Live dynamic discovery from Google Antigravity Code Assist API
   if (auth && auth.access_token) {
@@ -47,11 +55,51 @@ export async function getAvailableModels(): Promise<ModelDescriptor[]> {
           ) {
             continue;
           }
-          const displayName = (val as any)?.displayName || key;
+          const rawDisplayName = ((val as any)?.displayName || key) as string;
+
+          // Detect tiered thinking level from key or label
+          let tier = "medium";
+          if (key.includes("extra-low")) tier = "minimal";
+          else if (key.includes("low")) tier = "low";
+          else if (key.includes("high")) tier = "high";
+          else if (key.includes("medium")) tier = "medium";
+
+          // Clean display name: strip (Low), (Medium), (High), (Thinking), etc.
+          const cleanLabel = rawDisplayName
+            .replace(/\s*\((Low|Medium|High|Extra Low|Thinking|tiered)\)/gi, "")
+            .trim();
+
+          // Derive canonical base model ID
+          const baseId = key
+            .replace(/-(low|medium|high|extra-low|thinking|tiered)$/i, "")
+            .trim();
+
+          if (!groupedAntigravity.has(cleanLabel)) {
+            groupedAntigravity.set(cleanLabel, {
+              label: cleanLabel,
+              variants: {},
+              defaultId: key,
+            });
+          }
+
+          const group = groupedAntigravity.get(cleanLabel)!;
+          group.variants[tier] = key;
+          // Prefer medium or non-tiered as default
+          if (tier === "medium" || !key.includes("-low")) {
+            group.defaultId = key;
+          }
+        }
+
+        // Add clean grouped models
+        for (const [cleanLabel, group] of groupedAntigravity.entries()) {
+          modelVariantMap.set(group.defaultId, group.variants);
+          modelVariantMap.set(cleanLabel.toLowerCase(), group.variants);
+
           models.push({
-            id: key,
+            id: group.defaultId,
             provider: "antigravity",
-            label: `${displayName}`,
+            label: cleanLabel,
+            variants: group.variants,
           });
         }
       }
@@ -90,6 +138,7 @@ export async function getAvailableModels(): Promise<ModelDescriptor[]> {
 export async function resolveModel(
   requestedProvider?: string,
   requestedModelId?: string,
+  requestedThinkingLevel?: string,
 ): Promise<{
   model: Model<any>;
   isAntigravity: boolean;
@@ -109,7 +158,29 @@ export async function resolveModel(
       );
     }
 
-    const modelId = requestedModelId || "gemini-2.5-flash";
+    let modelId = requestedModelId || "gemini-2.5-flash";
+
+    // If model has thinking level variants, map to exact tiered model ID
+    const thinking = (requestedThinkingLevel || "medium").toLowerCase();
+    const variants =
+      modelVariantMap.get(modelId) ||
+      modelVariantMap.get(
+        modelId
+          .replace(/-(low|medium|high|extra-low|thinking)$/i, "")
+          .toLowerCase(),
+      );
+
+    if (variants) {
+      if (thinking === "high" && variants.high) {
+        modelId = variants.high;
+      } else if (thinking === "low" && variants.low) {
+        modelId = variants.low;
+      } else if (thinking === "minimal" && (variants.minimal || variants.low)) {
+        modelId = variants.minimal || variants.low;
+      } else if (variants.medium) {
+        modelId = variants.medium;
+      }
+    }
 
     const model: Model<any> = {
       id: modelId,
@@ -176,6 +247,6 @@ export async function resolveModel(
   }
 
   throw new Error(
-    "No authenticated model available. Please click 'LOGIN' in the top right to authenticate.",
+    "No supported model provider found. Please sign in with Google or set ANTHROPIC_API_KEY / OPENAI_API_KEY.",
   );
 }

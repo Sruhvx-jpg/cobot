@@ -33,6 +33,43 @@ function mergeConsecutiveTurns(
   return merged;
 }
 
+function sanitizeGeminiSchema(schema: any): any {
+  if (!schema || typeof schema !== "object") return schema;
+
+  if (Array.isArray(schema)) {
+    return schema.map(sanitizeGeminiSchema);
+  }
+
+  // Convert TypeBox anyOf: [{ const: "a" }, { const: "b" }] to enum: ["a", "b"]
+  if (Array.isArray(schema.anyOf)) {
+    const constVals = schema.anyOf
+      .map((item: any) => item?.const ?? item?.enum?.[0])
+      .filter((v: any) => v !== undefined);
+    if (constVals.length === schema.anyOf.length) {
+      const clean: Record<string, any> = {
+        type: "string",
+        enum: constVals,
+      };
+      if (schema.description) clean.description = schema.description;
+      return clean;
+    }
+  }
+
+  const clean: Record<string, any> = {};
+  for (const [key, value] of Object.entries(schema)) {
+    if (key === "$schema" || key === "additionalProperties") {
+      continue;
+    }
+    if (key === "const") {
+      clean.enum = [value];
+      continue;
+    }
+    clean[key] = sanitizeGeminiSchema(value);
+  }
+
+  return clean;
+}
+
 export function streamAntigravity(
   model: Model<any>,
   context: TranscriptContext,
@@ -128,7 +165,7 @@ export function streamAntigravity(
     // Merge consecutive same-role turns to satisfy Gemini role alternation requirements
     const contents = mergeConsecutiveTurns(rawContents);
 
-    // Map tools
+    // Map tools with schema sanitization
     const declaredTools = getCurrentTools(context.messages);
     const toolsPayload =
       declaredTools && declaredTools.length > 0
@@ -137,7 +174,7 @@ export function streamAntigravity(
               functionDeclarations: declaredTools.map((t: any) => ({
                 name: t.name,
                 description: t.description,
-                parameters: t.parameters,
+                parameters: sanitizeGeminiSchema(t.parameters),
               })),
             },
           ]
