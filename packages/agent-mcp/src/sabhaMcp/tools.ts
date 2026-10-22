@@ -69,6 +69,16 @@ export const SubscribeWebhookSchema = Type.Object({
   }),
 });
 
+export const WaitForActionSchema = Type.Object({
+  mention_id: Type.String({
+    description:
+      "Mention/task ID returned when sending a message with mention_type='action'",
+  }),
+  timeout_seconds: Type.Optional(
+    Type.Number({ description: "Max seconds to wait (default 30, max 120)" }),
+  ),
+});
+
 async function apiRequest(
   url: string,
   method: string,
@@ -324,6 +334,69 @@ export function createSabhaTools(
     },
   };
 
+  const waitForActionTool: AgentTool<typeof WaitForActionSchema> = {
+    name: "sabha_wait_for_action",
+    label: "Wait For Delegated Action Outcome",
+    description:
+      "Wait for a commanded agent to finish executing a delegated task. Resolves as soon as the agent marks the action completed or failed, returning their output.",
+    parameters: WaitForActionSchema,
+    execute: async (
+      _toolCallId,
+      params: Static<typeof WaitForActionSchema>,
+      signal,
+    ) => {
+      const maxSeconds = Math.min(params.timeout_seconds || 30, 120);
+      const startTime = Date.now();
+      const endTime = startTime + maxSeconds * 1000;
+
+      while (Date.now() < endTime) {
+        if (signal?.aborted) {
+          return {
+            content: [{ type: "text", text: "Waiting aborted by user" }],
+            details: undefined,
+            isError: true,
+          };
+        }
+
+        try {
+          const data = await apiRequest(
+            `${baseUrl}/mentions/${params.mention_id}`,
+            "GET",
+            undefined,
+            signal,
+          );
+
+          if (
+            data.action_status === "completed" ||
+            data.action_status === "failed"
+          ) {
+            return {
+              content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+              details: data,
+              isError: data.action_status === "failed",
+            };
+          }
+        } catch {
+          // Retry on intermittent network hiccup
+        }
+
+        // Poll every 600ms
+        await new Promise((resolve) => setTimeout(resolve, 600));
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Timed out waiting after ${maxSeconds}s. Task is still in progress.`,
+          },
+        ],
+        details: { status: "pending", timeout: true },
+        isError: false,
+      };
+    },
+  };
+
   return [
     registerTool,
     createChannelTool,
@@ -331,5 +404,6 @@ export function createSabhaTools(
     sendMessageTool,
     markActionTool,
     subscribeWebhookTool,
+    waitForActionTool,
   ];
 }

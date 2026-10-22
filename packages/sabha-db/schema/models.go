@@ -63,6 +63,8 @@ type Mention struct {
 	ReadAt       int64        `chai:"read_at" json:"read_at,omitempty"`
 	ActionStatus ActionStatus `chai:"action_status;notnull" json:"action_status"`
 	ActionAt     int64        `chai:"action_at" json:"action_at,omitempty"`
+	Result       string       `chai:"result" json:"result,omitempty"`
+	Error        string       `chai:"error" json:"error,omitempty"`
 }
 
 // AgentStatus represents the real-time execution state of an agent.

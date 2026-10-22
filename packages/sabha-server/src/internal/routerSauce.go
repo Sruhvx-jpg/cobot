@@ -22,6 +22,13 @@ import (
 
 var mentionRegex = regexp.MustCompile(`@([a-zA-Z0-9_\-]+)`)
 
+func normalizeAgentID(id string) string {
+	s := strings.ToLower(strings.TrimSpace(id))
+	s = strings.ReplaceAll(s, "-", "")
+	s = strings.ReplaceAll(s, "_", "")
+	return s
+}
+
 // GenerateID produces prefixed hex IDs (e.g. agent_..., chan_..., msg_..., men_...).
 func GenerateID(prefix string) string {
 	b := make([]byte, 8)
@@ -144,7 +151,11 @@ func HandleSubscribeWebhook(registry *sync.Map, w http.ResponseWriter, r *http.R
 		return
 	}
 
-	registry.Store(req.AgentID, req.WebhookURL)
+	rawID := strings.TrimSpace(req.AgentID)
+	registry.Store(rawID, req.WebhookURL)
+	registry.Store(normalizeAgentID(rawID), req.WebhookURL)
+	registry.Store(strings.ReplaceAll(rawID, "-", "_"), req.WebhookURL)
+	registry.Store(strings.ReplaceAll(rawID, "_", "-"), req.WebhookURL)
 	WriteJSON(w, http.StatusOK, map[string]string{"status": "subscribed", "agent_id": req.AgentID})
 }
 
@@ -276,7 +287,19 @@ func ProcessSendMessage(db *sabhadb.DB, registry *sync.Map, w http.ResponseWrite
 		go dispatchWebhooks(registry, mentionsToInsert, msg)
 	}
 
-	WriteJSON(w, http.StatusCreated, msg)
+	firstMentionID := ""
+	if len(mentionsToInsert) > 0 {
+		firstMentionID = mentionsToInsert[0].ID
+	}
+
+	WriteJSON(w, http.StatusCreated, map[string]any{
+		"id":          msg.ID,
+		"receiver_id": msg.ReceiverID,
+		"sender_id":   msg.SenderID,
+		"content":     msg.Content,
+		"sent_at":     msg.SentAt,
+		"mention_id":  firstMentionID,
+	})
 }
 
 func dispatchWebhooks(registry *sync.Map, mentions []schema.Mention, msg schema.Message) {
@@ -284,6 +307,15 @@ func dispatchWebhooks(registry *sync.Map, mentions []schema.Mention, msg schema.
 
 	for _, m := range mentions {
 		urlVal, ok := registry.Load(m.AgentID)
+		if !ok {
+			urlVal, ok = registry.Load(normalizeAgentID(m.AgentID))
+		}
+		if !ok {
+			urlVal, ok = registry.Load(strings.ReplaceAll(m.AgentID, "_", "-"))
+		}
+		if !ok {
+			urlVal, ok = registry.Load(strings.ReplaceAll(m.AgentID, "-", "_"))
+		}
 		if !ok {
 			fmt.Printf("[Sabha Webhook] Notice: Target agent %q has no registered webhook URL. Mention stored in DB.\n", m.AgentID)
 			continue
@@ -401,10 +433,12 @@ func HandleMarkMentionAction(db *sabhadb.DB, registry *sync.Map, broker *EventBr
 		return
 	}
 
-	// 3. Update mention record
+	// 3. Update mention record with result and error
 	_, err := db.Update("mentions").
 		Set("action_status", status).
 		Set("action_at", now).
+		Set("result", req.Result).
+		Set("error", req.Error).
 		Where("id = ?", mentionID).
 		Exec(ctx)
 
@@ -523,4 +557,26 @@ func HandleGetChannelMessages(db *sabhadb.DB, w http.ResponseWriter, r *http.Req
 	}
 
 	WriteJSON(w, http.StatusOK, messages)
+}
+
+// HandleGetMention returns the status, action outcome, and result of a specific mention.
+func HandleGetMention(db *sabhadb.DB, w http.ResponseWriter, r *http.Request) {
+	mentionID := chi.URLParam(r, "mentionID")
+	if mentionID == "" {
+		WriteAPIError(w, BadReq("mentionID is required"))
+		return
+	}
+
+	var mention schema.Mention
+	err := db.Select().
+		Model(&schema.Mention{}).
+		Where("id = ?", mentionID).
+		First(r.Context(), &mention)
+
+	if err != nil {
+		WriteAPIError(w, NotFound("mention not found").Wrap(err))
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, mention)
 }

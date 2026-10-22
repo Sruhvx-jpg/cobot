@@ -52,6 +52,11 @@ const BASE_TOOLS: ToolDefinition[] = [
     description:
       "Register the HTTP webhook endpoint where this agent receives wake-up pings and action delegations.",
   },
+  {
+    name: "sabha_wait_for_action",
+    description:
+      "Wait for a commanded agent to finish executing a delegated task. Resolves as soon as the agent marks the action completed or failed, returning their output.",
+  },
 ];
 
 const BASE_DOGMAS = [
@@ -96,16 +101,19 @@ You have dedicated Sabha tools. NEVER use 'bash' or shell exploration to search 
 
 HOW TO DELEGATE & COMMUNICATE WITH OTHER AGENTS:
 1. To assign work, ping, or delegate a task to another agent:
-   - Call 'sabha_send_message' immediately!
-   - 'channel_id': Use 'chan_general' (or discover active channels via 'sabha_list_channels').
-   - 'sender_id': Your registered agent ID (if not registered yet, call 'sabha_register_agent' first).
-   - 'mentions': Array containing the target agent's exact ID.
-   - 'mention_type': 'action' (when commanding work that requires execution) or 'info' (for a heads up).
-   - 'content': The actionable instruction with an '@' mention of the target agent ID.
-2. Once you call 'sabha_send_message' to delegate an action, STOP IMMEDIATELY. Do NOT attempt to execute the delegated task yourself. Reply stating that the task was dispatched to the agent.
-3. Sabha automatically intercepts the action mention, generates an isolated execution session, and wakes up the target agent via webhook.
-4. When the commanded agent completes the job, Sabha streams the outcome live back to you.
-Do NOT attempt to run bash commands, find files, or curl ports to coordinate with agents. Use 'sabha_send_message' directly.
+   - Call 'sabha_send_message' specifying:
+     - 'channel_id': 'chan_general' (or discover active channels via 'sabha_list_channels')
+     - 'sender_id': Your registered agent ID (call 'sabha_register_agent' first if not registered)
+     - 'mentions': Array with target agent's ID
+     - 'mention_type': 'action' (when commanding work that requires execution) or 'info' (for a heads up)
+     - 'content': The actionable instruction with an '@' mention of target agent
+   - 'sabha_send_message' returns a 'mention_id'.
+2. If the user requested you to report back, wait for the agent, or retrieve their findings:
+   - Immediately call 'sabha_wait_for_action' with the returned 'mention_id'!
+   - Once 'sabha_wait_for_action' resolves with the completed output, present the results directly to the user.
+3. If the user only asked you to fire a notice or dispatch without waiting:
+   - Stop after 'sabha_send_message' and state that the task was dispatched.
+Do NOT attempt to run bash commands, find files, or curl ports to coordinate with agents. Use Sabha tools directly.
 </multi_agent_network>`;
 
 export function buildAgentPrompt(extension: PromptExtension): string {

@@ -43,7 +43,10 @@ func (s *Server) registerRoutes() {
 		internal.HandleSendMessage(s.db, s.registry, w, r)
 	})
 
-	// Mention action markers
+	// Mention action markers & status lookup
+	s.router.Get("/mentions/{mentionID}", func(w http.ResponseWriter, r *http.Request) {
+		internal.HandleGetMention(s.db, w, r)
+	})
 	s.router.Post("/mentions/{mentionID}/read", func(w http.ResponseWriter, r *http.Request) {
 		internal.HandleMarkMentionRead(s.db, w, r)
 	})
