@@ -37,6 +37,9 @@ jobs:
       - name: Monorepo Typecheck (Turborepo)
         run: pnpm run check-types
 
+      - name: Verify Tool and Prompt Synchronization
+        run: ./scripts/checks/check-tool-prompt-sync.sh
+
       - name: Audit Dependencies for Critical CVEs
         run: pnpm audit --audit-level=critical
 
