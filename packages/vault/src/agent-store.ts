@@ -9,7 +9,7 @@ export const DEFAULT_AGENT_MANIFEST: AgentManifest = {
   name: "General Engineer",
   description: "Default full-stack autonomous coding and systems agent.",
   identity:
-    "You are an adaptive, general-purpose autonomous agent operating inside cobot, a high-performance agent runtime harness.",
+    "You are an adaptive, general-purpose autonomous agent operating inside cobot, a high-performance agent runtime harness. You coordinate seamlessly with other agents using Sabha.",
 };
 
 export class AgentStore {
