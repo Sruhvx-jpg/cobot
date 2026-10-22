@@ -1,7 +1,7 @@
 # BlockMaxMaxScore — How the Query Works
 
 This document walks through the query algorithm implemented in `maxscore.rs`.
-It is a *windowed, block-max* variant of the classic **MaxScore** algorithm
+It is a _windowed, block-max_ variant of the classic **MaxScore** algorithm
 (Turtle & Flood, 1995) adapted for our blocked posting-list layout.
 
 ## Background
@@ -9,7 +9,7 @@ It is a *windowed, block-max* variant of the classic **MaxScore** algorithm
 A sparse vector query computes the dot-product between a query vector and every
 stored document vector. Naively this means touching every document for every
 query dimension — far too slow at 100M+ documents. MaxScore avoids this by
-proving that large swaths of documents *cannot* make the top-k, and skipping
+proving that large swaths of documents _cannot_ make the top-k, and skipping
 them entirely.
 
 ## Data Layout
@@ -26,7 +26,7 @@ Dimension 42
 ```
 
 The `max_weight` per block is the key to skipping: it lets us compute a tight
-upper bound on how much any document *in that block* can contribute to a score,
+upper bound on how much any document _in that block_ can contribute to a score,
 without decompressing the block.
 
 ## Algorithm Outline
@@ -67,7 +67,7 @@ terms (sorted by window_score):
                             non-essential  essential
 ```
 
-**Essential** terms (right of the split) *might* push documents into the top-k
+**Essential** terms (right of the split) _might_ push documents into the top-k
 on their own, so we must score every document they contain. **Non-essential**
 terms (left of the split) are too weak — even their maximum possible
 contribution combined can't promote a zero-score document above the threshold.
@@ -169,14 +169,14 @@ and sort descending by score.
 
 ## Why It's Fast
 
-| Technique | Effect |
-|---|---|
-| Window accumulator | Dense array + bitmap avoids hash-map overhead |
-| Essential/non-essential split | Weak terms skip most documents entirely |
-| Per-window repartition | Split adapts as threshold tightens |
-| Budget pruning | Candidates are eliminated *before* scoring weak terms |
-| Block-max upper bounds | Entire blocks are skipped when their max is too low |
-| Bitmap-guided cleanup | Only touched slots are zeroed per window |
+| Technique                     | Effect                                                |
+| ----------------------------- | ----------------------------------------------------- |
+| Window accumulator            | Dense array + bitmap avoids hash-map overhead         |
+| Essential/non-essential split | Weak terms skip most documents entirely               |
+| Per-window repartition        | Split adapts as threshold tightens                    |
+| Budget pruning                | Candidates are eliminated _before_ scoring weak terms |
+| Block-max upper bounds        | Entire blocks are skipped when their max is too low   |
+| Bitmap-guided cleanup         | Only touched slots are zeroed per window              |
 
 ---
 

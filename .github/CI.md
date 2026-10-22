@@ -7,6 +7,7 @@ This document details the modular verification pipeline, Git hooks, and GitHub A
 ## 1. Design Philosophy: Verification as Components
 
 Every pre-commit check and CI step is treated as an **isolated, single-responsibility component**:
+
 - **Pre-commit**: Check scripts live under `scripts/checks/` as executable Bash components. They can be invoked directly in your terminal at any time without triggering a Git commit.
 - **Git Hooks**: `.husky/pre-commit` and `.husky/commit-msg` are lightweight orchestrators that simply invoke the check components in sequence.
 - **GitHub Actions**: Common environment setups (Node/pnpm, Rust/Tauri WebKitGTK) are packaged as **Composite Actions** under `.github/actions/` to eliminate duplicated YAML boilerplate.
@@ -63,10 +64,13 @@ You can test any check component independently during development:
 # Audit dependencies for critical CVEs
 ./scripts/checks/check-audit.sh
 ```
+
 ./scripts/checks/check-rust.sh
 
 # Audit dependencies for critical CVEs
+
 ./scripts/checks/check-audit.sh
+
 ```
 
 ---
@@ -76,8 +80,10 @@ You can test any check component independently during development:
 Commit messages are automatically linted against the **Conventional Commits** specification via `@commitlint/cli` and `@commitlint/config-conventional`:
 
 ```
+
 <type>(<scope>): <subject>
-```
+
+````
 
 ### Allowed Types:
 - `feat`: A new feature or capability.
@@ -138,4 +144,4 @@ jobs:
       matrix:
         platform: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
-```
+````

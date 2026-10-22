@@ -11,6 +11,7 @@ This implementation combines the WAND (Weak AND) algorithm from Broder et al. [1
 ### Background: WAND Algorithm
 
 The WAND algorithm [1] introduces a two-level query evaluation process:
+
 - **First level**: Approximate evaluation using partial information and upper bounds
 - **Second level**: Full evaluation of promising candidates
 
@@ -19,6 +20,7 @@ The core innovation is the WAND predicate, which generalizes AND and OR operatio
 ### Block-Max Enhancement
 
 The Block-Max WAND algorithm [2] improves upon WAND by:
+
 - Partitioning posting lists into fixed-size blocks (e.g., 64-256 documents)
 - Storing the maximum impact score for each block
 - Using block-level upper bounds instead of global maximums for more aggressive pruning
@@ -79,15 +81,18 @@ The combination of WAND's pivot-based traversal with Block-Max's fine-grained up
 The module consists of three main components:
 
 ### 1. Types (`types.rs`)
+
 - Utility functions for encoding/decoding dimension IDs as base64 strings
 - Constants for special prefixes used in blockfile storage
 
 ### 2. Writer (`writer.rs`)
+
 - **SparseDelta**: Accumulates changes (creates/deletes) to sparse vectors
 - **SparseWriter**: Manages the writing process with support for incremental updates
 - **SparseFlusher**: Handles the final commit and flush operations
 
 ### 3. Reader (`reader.rs`)
+
 - **SparseReader**: Provides read access to the sparse index
 - **Cursor**: Internal structure for tracking position in each dimension's posting list
 - **Score**: Result structure containing document offset and similarity score
@@ -95,6 +100,7 @@ The module consists of three main components:
 ## Data Layout on Blockfile
 
 The sparse index uses two separate blockfiles to store its data. Both blockfiles follow the standard Chroma blockfile format:
+
 ```
 Prefix (String) -> Key (K) -> Value (V)
 ```
@@ -104,6 +110,7 @@ Prefix (String) -> Key (K) -> Value (V)
 Stores block-level and dimension-level maximum values for efficient pruning.
 
 **Format:**
+
 ```
 Prefix: String -> Key: u32 -> Value: f32
 ```
@@ -111,28 +118,32 @@ Prefix: String -> Key: u32 -> Value: f32
 **Entries:**
 
 a) **Dimension-level maximums:**
-   - Prefix: `"DIMENSION"`
-   - Key: `dimension_id` (u32)
-   - Value: `dimension_max_value` (f32)
-   - Purpose: Stores the global maximum value for each dimension
+
+- Prefix: `"DIMENSION"`
+- Key: `dimension_id` (u32)
+- Value: `dimension_max_value` (f32)
+- Purpose: Stores the global maximum value for each dimension
 
 b) **Block-level maximums:**
-   - Prefix: `encode_u32(dimension_id)` (base64-encoded dimension ID)
-   - Key: `block_boundary_offset` (u32)
-   - Value: `block_max_value` (f32)
-   - Purpose: Stores the maximum value within each block for a dimension
-   - The `block_boundary_offset` is the exclusive upper bound of the block (i.e., one past the last document in the block)
+
+- Prefix: `encode_u32(dimension_id)` (base64-encoded dimension ID)
+- Key: `block_boundary_offset` (u32)
+- Value: `block_max_value` (f32)
+- Purpose: Stores the maximum value within each block for a dimension
+- The `block_boundary_offset` is the exclusive upper bound of the block (i.e., one past the last document in the block)
 
 ### 2. Offset-Value Blockfile (`sparse_offset_value`)
 
 Stores the actual sparse vector values for each document.
 
 **Format:**
+
 ```
 Prefix: String -> Key: u32 -> Value: f32
 ```
 
 **Entries:**
+
 - Prefix: `encode_u32(dimension_id)` (base64-encoded dimension ID)
 - Key: `document_offset` (u32)
 - Value: `value` (f32)
@@ -144,6 +155,7 @@ Prefix: String -> Key: u32 -> Value: f32
 For a sparse vector at document offset 42 with values `{dim_5: 0.8, dim_10: 0.3}` and block size 128:
 
 **Max Blockfile entries:**
+
 ```
 Prefix: "DIMENSION", Key: 5, Value: 0.9         # Global max for dimension 5
 Prefix: "DIMENSION", Key: 10, Value: 0.7        # Global max for dimension 10
@@ -152,6 +164,7 @@ Prefix: encode_u32(10), Key: 128, Value: 0.7    # Block [0,128) max for dim 10
 ```
 
 **Offset-Value Blockfile entries:**
+
 ```
 Prefix: encode_u32(5), Key: 42, Value: 0.8      # Value for dim 5 at doc 42
 Prefix: encode_u32(10), Key: 42, Value: 0.3     # Value for dim 10 at doc 42

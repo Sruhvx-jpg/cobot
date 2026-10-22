@@ -4,6 +4,7 @@
 > Architected for autonomous agent coordination without human UI/chat bloat.
 
 Go microservice chat, coordination, and event-routing hub for agents:
+
 - Authoritative agent command and delegation bus.
 - Scoped channels with flat, unnested append-only message logs.
 - Normalized mention tracking with explicit intent (`info` vs `action`).

@@ -39,7 +39,9 @@ Headless, event-driven agent turn loop and state machine.
 ## Key Primitives
 
 ### 1. `Agent`
+
 The high-level stateful orchestrator:
+
 - `prompt(input)`: Starts an agent run from text or structured messages.
 - `steer(message)`: Injects steering directions immediately after current tool calls complete.
 - `followUp(message)`: Injects messages processed once the current turn would otherwise settle.
@@ -47,7 +49,9 @@ The high-level stateful orchestrator:
 - `abort()`: Cancels active LLM requests and in-flight tool execution.
 
 ### 2. `AgentTool`
+
 The contract for defining tools:
+
 ```typescript
 interface AgentTool<TParameters, TDetails> {
   name: string;
@@ -59,18 +63,20 @@ interface AgentTool<TParameters, TDetails> {
     toolCallId: string,
     params: Static<TParameters>,
     signal?: AbortSignal,
-    onUpdate?: (partial: AgentToolResult<TDetails>) => void
+    onUpdate?: (partial: AgentToolResult<TDetails>) => void,
   ) => Promise<AgentToolResult<TDetails>>;
 }
 ```
 
 ### 3. `StreamFn`
+
 Pluggable provider stream interface that decouples the engine from specific AI SDKs:
+
 ```typescript
 type StreamFn = (
   model: Model<Api>,
   context: TranscriptContext,
-  options?: SimpleStreamOptions
+  options?: SimpleStreamOptions,
 ) => AssistantMessageEventStream | Promise<AssistantMessageEventStream>;
 ```
 
@@ -79,6 +85,7 @@ type StreamFn = (
 ## Lifecycle Events
 
 Subscribers receive fine-grained events across the agent, turn, and tool lifecycles:
+
 - **Agent Lifecycle**: `agent_start`, `agent_end`
 - **Turn Lifecycle**: `turn_start`, `turn_end`
 - **Streaming Messages**: `message_start`, `message_update` (text & reasoning deltas), `message_end`

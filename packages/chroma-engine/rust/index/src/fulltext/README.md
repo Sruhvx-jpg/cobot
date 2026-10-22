@@ -29,6 +29,7 @@ Entries are written in `(prefix, key)` sorted order: token buckets, then transit
 ## Query Pipeline
 
 **Stage 1 — Candidate resolution.** For each query token:
+
 - Body tokens (known word boundaries on both sides): hash directly to a single bucket ID.
 - Partial tokens (prefix, suffix, or singleton): resolve via trigram index. For each trigram, load the appropriate positional keys and AND across trigrams to get candidate bucket IDs.
 - Between adjacent tokens: filter bucket sets with transition bucket bitmaps.

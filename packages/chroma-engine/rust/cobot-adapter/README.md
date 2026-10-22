@@ -17,6 +17,7 @@ Upstream Chroma communicates across HTTP/gRPC daemons and defaults to bloated ON
 ## Core Interfaces
 
 ### The `Embedder` Trait
+
 Pluggable trait for any dense vector model:
 
 ```rust

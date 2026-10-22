@@ -65,11 +65,33 @@ cobot/
 - **`SessionStore`**: Agent turn logs and auto-titling built on top of `SimpleVault`.
 - See [`packages/vault/README.md`](./packages/vault/README.md).
 
-### 5. `packages/adaptor` (`@cobot/adaptor`)
+### 5. `packages/agent-mcp` (`@cobot/agent-mcp`)
 
-- MCP tool adapter enabling agents to connect to other microservices (such as `agent-house`).
+- Central Model Context Protocol (MCP) servers and tool adapters.
+- **`src/sabhaMcp/tools.ts`**: Native `AgentTool[]` connecting agents to Sabha (`sabha_register_agent`, `sabha_create_channel`, `sabha_list_channels`, `sabha_send_message`, `sabha_wait_for_action`, `sabha_mark_action`, `sabha_subscribe_webhook`).
+- **`src/sabhaMcp/mcp-server.ts`**: Standalone Model Context Protocol server over stdio/HTTP.
 
-### 6. `packages/ts-shared` (`@cobot/ts-shared`)
+### 6. `packages/agent-daemon-server` (`@cobot/agent-daemon-server`)
+
+- Express.js AG-UI backend engine, OAuth manager, and router for `@cobot/agent-daemon`.
+- Auto-syncs vault agents with Sabha on boot and exposes webhook wake-up endpoints (`POST /api/agents/:agentId/wake`).
+
+### 7. `packages/sabha-db` (`@cobot/sabha-db`)
+
+- Dedicated database access layer and domain schemas for Sabha (`Channel`, `Message`, `Mention`, `Agent`).
+- Reflection-based schema migrations powered by `chai.AutoMigrate` with dynamic `ALTER TABLE ADD COLUMN` evolution.
+
+### 8. `packages/sabha-server` (`@cobot/sabha-server`)
+
+- Central HTTP routing engine, API controllers, and event dispatcher for Sabha.
+- Standardized `APIError` operational error model and real-time Server-Sent Events (SSE) broker.
+
+### 9. `packages/chai-engine` (`@cobot/chai-engine`)
+
+- Pure-Go embedded relational SQL engine backed by CockroachDB's Pebble LSM engine.
+- Native reflection migrator (`chai.AutoMigrate`) and zero-dependency micro-ORM (`github.com/chaisql/chai/orm`).
+
+### 10. `packages/ts-shared` (`@cobot/ts-shared`)
 
 - TypeScript-only shared package housing backend and frontend domain models.
 - **`src/types.ts`**: Backend & engine contracts (`AgentRunRequest`, `AgentDomainEvent`, `AgentManifest`).
@@ -82,26 +104,21 @@ cobot/
 
 ### 1. `apps/agent-daemon` (`@cobot/agent-daemon`)
 
-- **Runtime**: Express.js with TypeScript (`tsx`).
-- **Protocol**: **AG-UI (Agent–User Interaction Protocol)** over Server-Sent Events.
-- **Features**:
-  - `src/engine.ts`: Pure agent loop orchestrator importing `@cobot/tools`.
-  - `src/ag-ui.ts`: AG-UI protocol event encoder.
-  - `src/auth/vault.ts`: Backend-only credential vault (`~/.cobot/vault.json`).
-  - `src/models/catalog.ts`: Live dynamic model discovery from Antigravity API.
-  - `src/models/antigravity-stream.ts`: Antigravity Code Assist streaming adapter with cryptographic `thoughtSignature` preservation.
+- **Runtime**: Ultra-lean Express.js daemon runner (port 3000).
+- Imports `@cobot/agent-daemon-server` to start the AG-UI streaming engine.
 
 ### 2. `apps/desktop` (`@cobot/desktop`)
 
 - **Runtime**: Tauri 2.0 desktop shell (React 19, Tailwind CSS, Lucide icons).
 - Pitch-black (`#000000`) dark theme + white light theme with top-right switcher.
-- Collapsible sidebar with icon-only controls (`+` New Session, `PanelLeftClose`/`PanelLeftOpen`).
-- Wider chat input with squircle corner smoothing (`smooth-corners`).
-- Dynamic model dropdown embedded directly inside the prompt container.
+- Dynamic model dropdown and thinking level switcher.
+- Dynamic input swap: ChatInput transitions to SteerInput during active agent runs.
 
-### 3. `apps/agent-house` (`@cobot/agent-house`)
+### 3. `apps/sabha` (`@cobot/sabha`) `[unstable-alpha-prototype.V0]`
 
-- Go microservice chat application for agents.
+- Go microservice chat & coordination hub runner (port 8080).
+- Imports `@cobot/sabha-db` and mounts `@cobot/sabha-server`.
+- Connected to persistent storage at `~/.cobot/sabha/sabha.db`.
 
 ### 4. `apps/tracer-duty` (`@cobot/tracer-duty`)
 

@@ -43,21 +43,25 @@ cobot/
 ## 2. Hard-Learned Anti-Patterns & Critical System Rules
 
 ### A. The Node.js SSE Abort Hazard (`req.on("close")` vs `res.on("close")`)
+
 - **The Bug**: Listening to `req.on("close", () => abortController.abort())` on POST requests.
 - **Why it Fails**: In Node.js `http.IncomingMessage`, `req.on("close")` fires as soon as the client finishes uploading its JSON POST body. If you check `!res.writableEnded`, it evaluates to `true` because the response stream just started. This instantly kills the agent run within 1–2ms before any LLM tokens can be generated.
-- **The Rule**: Always listen to `res.on("close", () => { if (!res.writableFinished) abortController.abort(); })`. Only abort when the *response* was cut short prematurely.
+- **The Rule**: Always listen to `res.on("close", () => { if (!res.writableFinished) abortController.abort(); })`. Only abort when the _response_ was cut short prematurely.
 
 ### B. Google Antigravity `thoughtSignature` Requirement
+
 - **The Bug**: Dropping `thoughtSignature` from `functionCall` blocks in multi-turn conversations.
 - **Why it Fails**: Google Antigravity models (especially Gemini 3.x) attach a cryptographic `thoughtSignature` to function calls. When the agent loop sends Turn 2 (assistant toolCall + user toolResult), Google strictly verifies the signature on the `functionCall` part. If missing, Google returns `HTTP 400: Function call is missing a thought_signature in functionCall parts`. The agent then stalls after running the tool.
 - **The Rule**: Always preserve `thoughtSignature` and `id` on every tool call block, and pass them back in the `contents[].parts[].functionCall` payload on subsequent turns.
 
 ### C. Strict Gemini Role Alternation (`mergeConsecutiveTurns`)
+
 - **The Bug**: Sending consecutive turns with the same role (e.g. multiple `user` tool-result turns in parallel tool batches).
 - **Why it Fails**: Google Antigravity requires strict role alternation: `user` → `model` → `user`. Sending two consecutive `user` turns causes HTTP 400.
 - **The Rule**: Always pass history through `mergeConsecutiveTurns()` before sending to Google: consecutive turns with the same role must have their `parts` merged into a single turn.
 
 ### D. Google Antigravity OAuth Client Credentials
+
 - Managed via `apps/agent-daemon/src/auth/vault.ts` (`ANTIGRAVITY_CLIENT_ID` / `ANTIGRAVITY_CLIENT_SECRET`).
 - Supports `ANTIGRAVITY_CLIENT_ID` and `ANTIGRAVITY_CLIENT_SECRET` environment variable overrides.
 - **Endpoint**: `https://daily-cloudcode-pa.googleapis.com/v1internal:streamGenerateContent?alt=sse`
@@ -82,6 +86,7 @@ cobot/
 ## 4. Verification Workflow
 
 Before committing any change:
+
 ```bash
 # 1. Typecheck all packages in parallel (must hit FULL TURBO with 0 errors)
 pnpm run check-types

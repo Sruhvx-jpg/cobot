@@ -1,6 +1,6 @@
 # Agent & Human Tool Synchronization Protocol
 
-> **Notice**: This document is intended for both AI agents and human developers working on Cobot. 
+> **Notice**: This document is intended for both AI agents and human developers working on Cobot.
 
 ---
 
@@ -10,7 +10,9 @@ Whenever you create, register, or modify a tool in `@cobot/tools` (or through th
 **You MUST update the respective system prompt (`packages/agent-prompt/src/base-prompt.ts`) immediately.**
 
 ### Why This Rule Exists:
+
 Without explicit inclusion in the system prompt's `<tools>` and `<rules>` blocks:
+
 1. The agent may not realize it has access to the tool during multi-step planning.
 2. The agent might fall back to dirty shell hacks (e.g. using `cat`/`sed` instead of dedicated tools).
 3. The model might hallucinate parameters or misuse the tool's execution model.
@@ -19,11 +21,11 @@ Without explicit inclusion in the system prompt's `<tools>` and `<rules>` blocks
 
 ## 2. Currently Registered Tools
 
-| Tool | Location | Purpose | System Prompt Description |
-| :--- | :--- | :--- | :--- |
-| **`read`** | `packages/tools/src/sauce/read.ts` | Read text files from disk | `<tools>` - `read: Read file contents from disk...` |
-| **`write`** | `packages/tools/src/sauce/write.ts` | Create or overwrite files | `<tools>` - `write: Create or overwrite files on disk...` |
-| **`bash`** | `packages/tools/src/sauce/bash.ts` | Non-interactive shell execution | `<tools>` - `bash: Execute non-interactive shell commands...` |
+| Tool        | Location                            | Purpose                         | System Prompt Description                                     |
+| :---------- | :---------------------------------- | :------------------------------ | :------------------------------------------------------------ |
+| **`read`**  | `packages/tools/src/sauce/read.ts`  | Read text files from disk       | `<tools>` - `read: Read file contents from disk...`           |
+| **`write`** | `packages/tools/src/sauce/write.ts` | Create or overwrite files       | `<tools>` - `write: Create or overwrite files on disk...`     |
+| **`bash`**  | `packages/tools/src/sauce/bash.ts`  | Non-interactive shell execution | `<tools>` - `bash: Execute non-interactive shell commands...` |
 
 ---
 

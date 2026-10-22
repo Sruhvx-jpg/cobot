@@ -1,9 +1,10 @@
 # Future Optimization Opportunities
 
 Target hardware:
-  - Query:  r6id.8xlarge  (32 vCPU Ice Lake, AVX-512 + VPOPCNTDQ + VNNI)
-  - Index:  r6id.32xlarge (128 vCPU Ice Lake)
-  - Future: Graviton 3/4  (ARM Neoverse V1/V2, NEON + SVE)
+
+- Query: r6id.8xlarge (32 vCPU Ice Lake, AVX-512 + VPOPCNTDQ + VNNI)
+- Index: r6id.32xlarge (128 vCPU Ice Lake)
+- Future: Graviton 3/4 (ARM Neoverse V1/V2, NEON + SVE)
 
 ## [OPT-1] Replace `Vec<Arc<[u8]>>` with a contiguous slab in `QuantizedDelta`
 
@@ -60,14 +61,14 @@ pattern the blockfile reader already uses.
 
 ### Impact per call site
 
-| Location | Current | After slab |
-|---|---|---|
-| `load()` L274 | `Arc::from(chunk)` × N | `slab.extend_from_slice(chunk)` |
-| `commit()` L872 | flatten N Arcs → `Vec<u8>` | zero-copy: reference `delta.codes` directly |
-| `split()` L600/L615 | `quantize().as_ref().into()` × N | pre-allocate slab, `quantize_into` each |
-| `merge()` L353 | `quantize().as_ref().into()` per loop iter | extend slab, `quantize_into` |
-| `register()` L426/L446 | single quantize, Arc wrap | extend slab, `quantize_into` |
-| NPA scan L728 | `codes.iter()` with pointer chasing | sequential slab access, better cache locality |
+| Location               | Current                                    | After slab                                    |
+| ---------------------- | ------------------------------------------ | --------------------------------------------- |
+| `load()` L274          | `Arc::from(chunk)` × N                     | `slab.extend_from_slice(chunk)`               |
+| `commit()` L872        | flatten N Arcs → `Vec<u8>`                 | zero-copy: reference `delta.codes` directly   |
+| `split()` L600/L615    | `quantize().as_ref().into()` × N           | pre-allocate slab, `quantize_into` each       |
+| `merge()` L353         | `quantize().as_ref().into()` per loop iter | extend slab, `quantize_into`                  |
+| `register()` L426/L446 | single quantize, Arc wrap                  | extend slab, `quantize_into`                  |
+| NPA scan L728          | `codes.iter()` with pointer chasing        | sequential slab access, better cache locality |
 
 ### Prerequisite
 
