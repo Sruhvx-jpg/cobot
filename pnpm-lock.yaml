@@ -32,49 +32,10 @@ importers:
 
   apps/agent-daemon:
     dependencies:
-      '@ag-ui/core':
-        specifier: ^1.0.3
-        version: 1.0.3(zod@3.25.76)
-      '@ag-ui/encoder':
-        specifier: ^1.0.3
-        version: 1.0.3(zod@3.25.76)
-      '@cobot/agent-core':
+      '@cobot/agent-daemon-server':
         specifier: workspace:*
-        version: link:../../packages/agent-core
-      '@cobot/agent-prompt':
-        specifier: workspace:*
-        version: link:../../packages/agent-prompt
-      '@cobot/tools':
-        specifier: workspace:*
-        version: link:../../packages/tools
-      '@cobot/ts-shared':
-        specifier: workspace:*
-        version: link:../../packages/ts-shared
-      '@cobot/vault':
-        specifier: workspace:*
-        version: link:../../packages/vault
-      '@earendil-works/pi-ai':
-        specifier: ^1.3.0
-        version: 1.3.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.4)(supports-color@7.2.0)(undici@8.12.2)(ws@8.22.0)(zod@3.25.76)
-      cors:
-        specifier: ^2.8.5
-        version: 2.8.6
-      express:
-        specifier: ^4.21.2
-        version: 4.22.3(supports-color@7.2.0)
-      pi-antigravity:
-        specifier: ^0.10.0
-        version: 0.10.0(@earendil-works/pi-ai@1.3.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.4)(supports-color@7.2.0)(undici@8.12.2)(ws@8.22.0)(zod@3.25.76))(@earendil-works/pi-coding-agent@1.3.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.4)(supports-color@7.2.0)(ws@8.22.0)(zod@3.25.76))
-      typebox:
-        specifier: ^1.3.27
-        version: 1.4.2
+        version: link:../../packages/agent-daemon-server
     devDependencies:
-      '@types/cors':
-        specifier: ^2.8.17
-        version: 2.8.19
-      '@types/express':
-        specifier: ^4.17.21
-        version: 4.17.25
       '@types/node':
         specifier: ^22.10.1
         version: 22.20.5
@@ -135,7 +96,21 @@ importers:
 
   apps/tracer-duty: {}
 
-  packages/adaptor: {}
+  packages/adaptor:
+    dependencies:
+      '@cobot/agent-core':
+        specifier: workspace:*
+        version: link:../agent-core
+      typebox:
+        specifier: ^1.3.27
+        version: 1.4.2
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.1
+        version: 22.20.5
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
 
   packages/agent-core:
     dependencies:
@@ -145,6 +120,61 @@ importers:
       typebox:
         specifier: ^1.3.27
         version: 1.4.2
+
+  packages/agent-daemon-server:
+    dependencies:
+      '@ag-ui/core':
+        specifier: ^1.0.3
+        version: 1.0.3(zod@3.25.76)
+      '@ag-ui/encoder':
+        specifier: ^1.0.3
+        version: 1.0.3(zod@3.25.76)
+      '@cobot/agent-core':
+        specifier: workspace:*
+        version: link:../agent-core
+      '@cobot/agent-prompt':
+        specifier: workspace:*
+        version: link:../agent-prompt
+      '@cobot/tools':
+        specifier: workspace:*
+        version: link:../tools
+      '@cobot/ts-shared':
+        specifier: workspace:*
+        version: link:../ts-shared
+      '@cobot/vault':
+        specifier: workspace:*
+        version: link:../vault
+      '@earendil-works/pi-ai':
+        specifier: ^1.3.0
+        version: 1.3.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.4)(supports-color@7.2.0)(undici@8.12.2)(ws@8.22.0)(zod@3.25.76)
+      cors:
+        specifier: ^2.8.5
+        version: 2.8.6
+      express:
+        specifier: ^4.21.2
+        version: 4.22.3(supports-color@7.2.0)
+      pi-antigravity:
+        specifier: ^0.10.0
+        version: 0.10.0(@earendil-works/pi-ai@1.3.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.4)(supports-color@7.2.0)(undici@8.12.2)(ws@8.22.0)(zod@3.25.76))(@earendil-works/pi-coding-agent@1.3.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.4)(supports-color@7.2.0)(ws@8.22.0)(zod@3.25.76))
+      typebox:
+        specifier: ^1.3.27
+        version: 1.4.2
+    devDependencies:
+      '@types/cors':
+        specifier: ^2.8.17
+        version: 2.8.19
+      '@types/express':
+        specifier: ^4.17.21
+        version: 4.17.25
+      '@types/node':
+        specifier: ^22.10.1
+        version: 22.20.5
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.15
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
 
   packages/agent-prompt:
     devDependencies:
