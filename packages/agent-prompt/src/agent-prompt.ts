@@ -25,6 +25,16 @@ const BASE_TOOLS: ToolDefinition[] = [
       "Execute non-interactive shell commands in the current working directory. Use for listing files, running builds, executing tests, inspecting system state, and invoking CLI tools.",
   },
   {
+    name: "vector_search",
+    description:
+      "Search long-term semantic vector memory using ChromaDB for past architectural decisions, notes, code context, or session memory.",
+  },
+  {
+    name: "vector_upsert",
+    description:
+      "Save a document, architecture decision, or important technical note into long-term semantic vector memory so it can be recalled in future queries.",
+  },
+  {
     name: "sabha_register_agent",
     description:
       "Register an autonomous agent with the Sabha coordination hub and get a unique agent_id.",
