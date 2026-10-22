@@ -1,8 +1,8 @@
 {
   "name": "@cobot/sabha-server",
-  "version": "0.1.0",
+  "version": "0.0.0-unstable-alpha.0",
   "private": true,
-  "description": "Central router, HTTP API handlers, and webhook dispatcher for Sabha",
+  "description": "Central router, HTTP API handlers, and webhook dispatcher for Sabha [unstable-alpha-prototype.V0]",
   "scripts": {
     "build": "go build ./...",
     "check-types": "go vet ./...",

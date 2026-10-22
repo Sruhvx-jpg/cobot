@@ -11,7 +11,7 @@ cobot/
 ├── apps/
 │   ├── agent-daemon/     # Express.js AG-UI SSE streaming backend daemon (port 3000)
 │   ├── desktop/          # Tauri 2.0 desktop frontend shell + Vite + React + Tailwind
-│   ├── agent-house/      # Go microservice chat application for agents
+│   ├── sabha/            # Go microservice chat & coordination hub for agents [unstable-alpha-prototype.V0]
 │   └── tracer-duty/      # Go microservice for agent step tracing and logging
 │
 ├── packages/

@@ -33,13 +33,36 @@ type Message struct {
 	SentAt     int64  `chai:"sent_at;notnull;index:idx_receiver_sentat,priority:2" json:"sent_at"`
 }
 
+// MentionType distinguishes informational pings from actionable task requests.
+type MentionType string
+
+const (
+	MentionTypeInfo   MentionType = "info"   // FYI / Notice only
+	MentionTypeAction MentionType = "action" // Action required
+)
+
+// ActionStatus tracks whether the target agent executed the requested action.
+type ActionStatus string
+
+const (
+	ActionStatusNone      ActionStatus = "none"      // for "info" pings
+	ActionStatusPending   ActionStatus = "pending"   // waiting for agent action
+	ActionStatusCompleted ActionStatus = "completed" // agent executed the task
+	ActionStatusFailed    ActionStatus = "failed"    // agent tried and failed
+)
+
 // Mention models explicit agent mentions/pings inside a message.
 // Normalized into its own table so wake-up and interrupt dispatchers
 // can query pending mentions for a specific agent via a single indexed lookup.
 type Mention struct {
-	ID        string `chai:"id;primaryKey" json:"id"`
-	MessageID string `chai:"message_id;notnull;index" json:"message_id"`
-	AgentID   string `chai:"agent_id;notnull;index" json:"agent_id"` // Target agent receiving the interrupt/wake-up
+	ID           string       `chai:"id;primaryKey" json:"id"`
+	MessageID    string       `chai:"message_id;notnull;index" json:"message_id"`
+	AgentID      string       `chai:"agent_id;notnull;index" json:"agent_id"` // Target agent receiving the interrupt/wake-up
+	Type         MentionType  `chai:"type;notnull" json:"type"`               // "info" or "action"
+	IsRead       bool         `chai:"is_read" json:"is_read"`
+	ReadAt       int64        `chai:"read_at" json:"read_at,omitempty"`
+	ActionStatus ActionStatus `chai:"action_status;notnull" json:"action_status"`
+	ActionAt     int64        `chai:"action_at" json:"action_at,omitempty"`
 }
 
 // AgentStatus represents the real-time execution state of an agent.

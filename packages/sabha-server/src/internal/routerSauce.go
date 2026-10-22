@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -8,6 +10,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	sabhadb "github.com/Sruhvx-jpg/cobot/packages/sabha-db"
@@ -18,7 +21,7 @@ import (
 
 var mentionRegex = regexp.MustCompile(`@([a-zA-Z0-9_\-]+)`)
 
-// GenerateID produces prefixed hex IDs (e.g. agent_..., chan_..., msg_...).
+// GenerateID produces prefixed hex IDs (e.g. agent_..., chan_..., msg_..., men_...).
 func GenerateID(prefix string) string {
 	b := make([]byte, 8)
 	_, _ = rand.Read(b)
@@ -32,7 +35,10 @@ func WriteJSON(w http.ResponseWriter, status int, data any) {
 	_ = json.NewEncoder(w).Encode(data)
 }
 
-// HandleRegisterAgent registers a new agent into Sabha.
+// -------------------------------------------------------------------------
+// AGENT REGISTRATION
+// -------------------------------------------------------------------------
+
 func HandleRegisterAgent(db *sabhadb.DB, w http.ResponseWriter, r *http.Request) {
 	var req RegisterAgentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -66,7 +72,10 @@ func HandleRegisterAgent(db *sabhadb.DB, w http.ResponseWriter, r *http.Request)
 	WriteJSON(w, http.StatusCreated, agent)
 }
 
-// HandleCreateChannel creates a new text channel.
+// -------------------------------------------------------------------------
+// CHANNEL CREATION & LISTING
+// -------------------------------------------------------------------------
+
 func HandleCreateChannel(db *sabhadb.DB, w http.ResponseWriter, r *http.Request) {
 	var req CreateChannelRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -99,7 +108,6 @@ func HandleCreateChannel(db *sabhadb.DB, w http.ResponseWriter, r *http.Request)
 	WriteJSON(w, http.StatusCreated, ch)
 }
 
-// HandleListChannels retrieves all channels.
 func HandleListChannels(db *sabhadb.DB, w http.ResponseWriter, r *http.Request) {
 	var channels []schema.Channel
 	err := db.Select().
@@ -115,8 +123,35 @@ func HandleListChannels(db *sabhadb.DB, w http.ResponseWriter, r *http.Request) 
 	WriteJSON(w, http.StatusOK, channels)
 }
 
-// HandleSendChannelMessage handles POST /channels/{channelID}/messages.
-func HandleSendChannelMessage(db *sabhadb.DB, w http.ResponseWriter, r *http.Request) {
+// -------------------------------------------------------------------------
+// WEBHOOK SUBSCRIPTION
+// -------------------------------------------------------------------------
+
+func HandleSubscribeWebhook(registry *sync.Map, w http.ResponseWriter, r *http.Request) {
+	var req SubscribeWebhookRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteAPIError(w, BadReq("invalid json payload"))
+		return
+	}
+
+	if strings.TrimSpace(req.AgentID) == "" {
+		WriteAPIError(w, BadReq("agent_id is required"))
+		return
+	}
+	if strings.TrimSpace(req.WebhookURL) == "" {
+		WriteAPIError(w, BadReq("webhook_url is required"))
+		return
+	}
+
+	registry.Store(req.AgentID, req.WebhookURL)
+	WriteJSON(w, http.StatusOK, map[string]string{"status": "subscribed", "agent_id": req.AgentID})
+}
+
+// -------------------------------------------------------------------------
+// MESSAGE SENDING & WEBHOOK DISPATCH
+// -------------------------------------------------------------------------
+
+func HandleSendChannelMessage(db *sabhadb.DB, registry *sync.Map, w http.ResponseWriter, r *http.Request) {
 	channelID := chi.URLParam(r, "channelID")
 	if channelID == "" {
 		WriteAPIError(w, BadReq("channelID is required"))
@@ -130,22 +165,20 @@ func HandleSendChannelMessage(db *sabhadb.DB, w http.ResponseWriter, r *http.Req
 	}
 	req.ReceiverID = channelID
 
-	ProcessSendMessage(db, w, r, req)
+	ProcessSendMessage(db, registry, w, r, req)
 }
 
-// HandleSendMessage handles unified POST /messages.
-func HandleSendMessage(db *sabhadb.DB, w http.ResponseWriter, r *http.Request) {
+func HandleSendMessage(db *sabhadb.DB, registry *sync.Map, w http.ResponseWriter, r *http.Request) {
 	var req SendMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteAPIError(w, BadReq("invalid json payload"))
 		return
 	}
 
-	ProcessSendMessage(db, w, r, req)
+	ProcessSendMessage(db, registry, w, r, req)
 }
 
-// ProcessSendMessage executes validation and transactional persistence of a message + mentions.
-func ProcessSendMessage(db *sabhadb.DB, w http.ResponseWriter, r *http.Request, req SendMessageRequest) {
+func ProcessSendMessage(db *sabhadb.DB, registry *sync.Map, w http.ResponseWriter, r *http.Request, req SendMessageRequest) {
 	ctx := r.Context()
 
 	if strings.TrimSpace(req.ReceiverID) == "" {
@@ -172,7 +205,15 @@ func ProcessSendMessage(db *sabhadb.DB, w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	// 2. Extract mentions
+	// 2. Determine mention type & action status
+	mentionType := schema.MentionTypeInfo
+	actionStatus := schema.ActionStatusNone
+	if strings.ToLower(strings.TrimSpace(req.MentionType)) == "action" {
+		mentionType = schema.MentionTypeAction
+		actionStatus = schema.ActionStatusPending
+	}
+
+	// 3. Extract mentions
 	mentionSet := make(map[string]bool)
 	for _, m := range req.Mentions {
 		if trimmed := strings.TrimSpace(m); trimmed != "" {
@@ -185,27 +226,37 @@ func ProcessSendMessage(db *sabhadb.DB, w http.ResponseWriter, r *http.Request, 
 		}
 	}
 
-	// 3. Create message model
+	// 4. Create message model
+	now := time.Now().UnixMilli()
 	msg := schema.Message{
 		ID:         GenerateID("msg"),
 		ReceiverID: req.ReceiverID,
 		SenderID:   req.SenderID,
 		Content:    req.Content,
-		SentAt:     time.Now().UnixMilli(),
+		SentAt:     now,
 	}
 
-	// 4. Persist message and mentions transactionally
+	// 5. Build mentions slice
+	var mentionsToInsert []schema.Mention
+	for targetAgent := range mentionSet {
+		men := schema.Mention{
+			ID:           GenerateID("men"),
+			MessageID:    msg.ID,
+			AgentID:      targetAgent,
+			Type:         mentionType,
+			IsRead:       false,
+			ActionStatus: actionStatus,
+		}
+		mentionsToInsert = append(mentionsToInsert, men)
+	}
+
+	// 6. Transactional persistence
 	err = db.Transaction(ctx, func(tx *orm.Tx) error {
 		if _, err := tx.Insert(&msg).Exec(ctx); err != nil {
 			return err
 		}
 
-		for targetAgent := range mentionSet {
-			men := schema.Mention{
-				ID:        GenerateID("men"),
-				MessageID: msg.ID,
-				AgentID:   targetAgent,
-			}
+		for _, men := range mentionsToInsert {
 			if _, err := tx.Insert(&men).Exec(ctx); err != nil {
 				return err
 			}
@@ -219,5 +270,193 @@ func ProcessSendMessage(db *sabhadb.DB, w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
+	// 7. Background asynchronous webhook dispatch (non-blocking)
+	if len(mentionsToInsert) > 0 && registry != nil {
+		go dispatchWebhooks(registry, mentionsToInsert, msg)
+	}
+
 	WriteJSON(w, http.StatusCreated, msg)
+}
+
+func dispatchWebhooks(registry *sync.Map, mentions []schema.Mention, msg schema.Message) {
+	client := &http.Client{Timeout: 3 * time.Second}
+
+	for _, m := range mentions {
+		urlVal, ok := registry.Load(m.AgentID)
+		if !ok {
+			continue
+		}
+		targetURL, ok := urlVal.(string)
+		if !ok || targetURL == "" {
+			continue
+		}
+
+		sessionID := ""
+		if m.Type == schema.MentionTypeAction {
+			sessionID = fmt.Sprintf("sess_%s", m.ID)
+		}
+
+		payload := WebhookEventPayload{
+			Event:          "mention",
+			MentionID:      m.ID,
+			SessionID:      sessionID,
+			Type:           string(m.Type),
+			ActionRequired: m.Type == schema.MentionTypeAction,
+			ChannelID:      msg.ReceiverID,
+			SenderID:       msg.SenderID,
+			Content:        msg.Content,
+			SentAt:         msg.SentAt,
+		}
+
+		bodyBytes, err := json.Marshal(payload)
+		if err != nil {
+			continue
+		}
+
+		go func(url string, data []byte) {
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, bytes.NewReader(data))
+			if err != nil {
+				return
+			}
+			req.Header.Set("Content-Type", "application/json")
+			resp, err := client.Do(req)
+			if err == nil && resp != nil {
+				_ = resp.Body.Close()
+			}
+		}(targetURL, bodyBytes)
+	}
+}
+
+// -------------------------------------------------------------------------
+// MENTION MARKERS (Read & Action Taken)
+// -------------------------------------------------------------------------
+
+func HandleMarkMentionRead(db *sabhadb.DB, w http.ResponseWriter, r *http.Request) {
+	mentionID := chi.URLParam(r, "mentionID")
+	if mentionID == "" {
+		WriteAPIError(w, BadReq("mentionID is required"))
+		return
+	}
+
+	ctx := r.Context()
+	now := time.Now().UnixMilli()
+
+	var mention schema.Mention
+	if err := db.Select().Model(&schema.Mention{}).Where("id = ?", mentionID).First(ctx, &mention); err != nil {
+		WriteAPIError(w, NotFound("mention not found").Wrap(err))
+		return
+	}
+
+	_, err := db.Update("mentions").
+		Set("is_read", true).
+		Set("read_at", now).
+		Where("id = ?", mentionID).
+		Exec(ctx)
+
+	if err != nil {
+		WriteAPIError(w, InternalErr("failed to mark mention as read").Wrap(err))
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]any{"status": "marked_read", "mention_id": mentionID, "read_at": now})
+}
+
+func HandleMarkMentionAction(db *sabhadb.DB, registry *sync.Map, broker *EventBroker, w http.ResponseWriter, r *http.Request) {
+	mentionID := chi.URLParam(r, "mentionID")
+	if mentionID == "" {
+		WriteAPIError(w, BadReq("mentionID is required"))
+		return
+	}
+
+	var req MarkActionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteAPIError(w, BadReq("invalid json payload"))
+		return
+	}
+
+	status := strings.ToLower(strings.TrimSpace(req.Status))
+	if status != string(schema.ActionStatusCompleted) && status != string(schema.ActionStatusFailed) {
+		WriteAPIError(w, BadReq("status must be 'completed' or 'failed'"))
+		return
+	}
+
+	ctx := r.Context()
+	now := time.Now().UnixMilli()
+
+	// 1. Fetch mention to identify commanded agent and message ID
+	var mention schema.Mention
+	if err := db.Select().Model(&schema.Mention{}).Where("id = ?", mentionID).First(ctx, &mention); err != nil {
+		WriteAPIError(w, NotFound("mention not found").Wrap(err))
+		return
+	}
+
+	// 2. Fetch original message to identify commanding agent (SenderID)
+	var origMsg schema.Message
+	if err := db.Select().Model(&schema.Message{}).Where("id = ?", mention.MessageID).First(ctx, &origMsg); err != nil {
+		WriteAPIError(w, NotFound("original message not found").Wrap(err))
+		return
+	}
+
+	// 3. Update mention record
+	_, err := db.Update("mentions").
+		Set("action_status", status).
+		Set("action_at", now).
+		Where("id = ?", mentionID).
+		Exec(ctx)
+
+	if err != nil {
+		WriteAPIError(w, InternalErr("failed to update mention action status").Wrap(err))
+		return
+	}
+
+	// 4. Construct payload for the commanding agent
+	sessionID := req.SessionID
+	if sessionID == "" {
+		sessionID = fmt.Sprintf("sess_%s", mentionID)
+	}
+
+	resultPayload := ActionResultPayload{
+		Event:     "action_taken",
+		MentionID: mentionID,
+		SessionID: sessionID,
+		WorkerID:  mention.AgentID, // Commanded agent
+		ChannelID: origMsg.ReceiverID,
+		Status:    status,
+		Error:     req.Error,
+		Result:    req.Result,
+	}
+
+	// 5. Stream action live over HTTP SSE directly to the commanding agent!
+	if broker != nil {
+		broker.SendToAgent(origMsg.SenderID, "action_taken", resultPayload)
+	}
+
+	// 6. Also fire return webhook if commanding agent registered one
+	if registry != nil {
+		if urlVal, ok := registry.Load(origMsg.SenderID); ok {
+			if targetURL, ok := urlVal.(string); ok && targetURL != "" {
+				go func(url string, payload ActionResultPayload) {
+					client := &http.Client{Timeout: 3 * time.Second}
+					data, _ := json.Marshal(payload)
+					req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, bytes.NewReader(data))
+					if err == nil {
+						req.Header.Set("Content-Type", "application/json")
+						resp, err := client.Do(req)
+						if err == nil && resp != nil {
+							_ = resp.Body.Close()
+						}
+					}
+				}(targetURL, resultPayload)
+			}
+		}
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]any{
+		"status":        "action_recorded",
+		"mention_id":    mentionID,
+		"session_id":    sessionID,
+		"commander_id":  origMsg.SenderID,
+		"action_status": status,
+		"action_at":     now,
+	})
 }
