@@ -1,8 +1,8 @@
 {
-  "name": "@cobot/adaptor",
+  "name": "@cobot/agent-mcp",
   "version": "0.1.0",
   "private": true,
-  "description": "MCP and tool adapters connecting Cobot agents to microservices like Sabha",
+  "description": "Central MCP servers and tool adapters connecting Cobot agents to microservices like Sabha",
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@cobot/agent-core": "workspace:*",
-    "typebox": "^1.3.27"
+    "@modelcontextprotocol/sdk": "^1.25.2",
+    "typebox": "^1.3.27",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",

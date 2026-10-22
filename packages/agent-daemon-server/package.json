@@ -11,6 +11,7 @@
     "@ag-ui/core": "^1.0.3",
     "@ag-ui/encoder": "^1.0.3",
     "@cobot/agent-core": "workspace:*",
+    "@cobot/agent-mcp": "workspace:*",
     "@cobot/agent-prompt": "workspace:*",
     "@cobot/tools": "workspace:*",
     "@cobot/ts-shared": "workspace:*",

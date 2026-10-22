@@ -1,6 +1,7 @@
 import { Agent } from "@cobot/agent-core";
 import { streamSimple } from "@earendil-works/pi-ai/compat";
 import { createBaseTools } from "@cobot/tools";
+import { createSabhaTools } from "@cobot/agent-mcp";
 import { buildAgentPrompt } from "@cobot/agent-prompt";
 import { CobotVault, DEFAULT_AGENT_MANIFEST } from "@cobot/vault";
 import { resolveModel } from "./models/catalog.js";
@@ -38,7 +39,8 @@ export class CobotAgentEngine {
     const cwd = request.cwd || process.cwd();
     const sessionId = request.sessionId || `session_${Date.now()}`;
     const agentId = request.agentId || "default";
-    const tools = createBaseTools(cwd);
+    const sabhaUrl = process.env.SABHA_URL || "http://localhost:8080";
+    const tools = [...createBaseTools(cwd), ...createSabhaTools(sabhaUrl)];
 
     // 1. Resolve agent manifest from vault
     let manifest = await this.vault.agents.get(agentId);

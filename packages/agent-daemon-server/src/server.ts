@@ -310,6 +310,54 @@ export async function createDaemonServer(
     res.json({ ok: true, steered: true });
   });
 
+  /** Webhook Wake-Up Endpoint for Sabha Mentions / Action Delegations */
+  app.post("/api/agents/:agentId/wake", async (req, res) => {
+    const { agentId } = req.params;
+    const {
+      mention_id,
+      session_id,
+      action_required,
+      content,
+      sender_id,
+      channel_id,
+    } = req.body as {
+      mention_id?: string;
+      session_id?: string;
+      action_required?: boolean;
+      content?: string;
+      sender_id?: string;
+      channel_id?: string;
+    };
+
+    res.status(200).json({
+      status: "acknowledged",
+      agent_id: agentId,
+      mention_id,
+      session_id,
+    });
+
+    // If an action is required, trigger an isolated background agent turn!
+    if (action_required && content) {
+      const taskPrompt = `[Task Delegation from @${sender_id || "commander"} in channel ${channel_id || "general"}]\n${content}\n\n[Instruction]: Execute this task using available tools. When complete or if failed, invoke the 'sabha_mark_action' tool with mention_id='${mention_id}', session_id='${session_id}', and status='completed' or 'failed'.`;
+
+      engine
+        .run(
+          {
+            prompt: taskPrompt,
+            agentId,
+            sessionId: session_id || `session_${mention_id}`,
+          },
+          () => {}, // background run
+        )
+        .catch((err) => {
+          console.error(
+            `[Sabha Wake-Up] Agent ${agentId} execution failed:`,
+            (err as Error).message,
+          );
+        });
+    }
+  });
+
   return {
     app,
     engine,
