@@ -152,3 +152,6 @@ jobs:
       - name: Run Adapter Unit Tests
         run: cargo test --manifest-path packages/chroma-engine/Cargo.toml -p cobot-adapter
 
+      - name: Cargo Check (ChromaDB Actix Server)
+        run: cargo check --manifest-path packages/chromadb-server/Cargo.toml
+

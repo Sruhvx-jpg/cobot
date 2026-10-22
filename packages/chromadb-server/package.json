@@ -1,0 +1,11 @@
+{
+  "name": "@cobot/chromadb-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "High-throughput Actix Web vector search gateway powered by Sruhvx-jpg's HTTP QUERY fork",
+  "type": "module",
+  "scripts": {
+    "build": "cargo build --release",
+    "check-types": "true"
+  }
+}

@@ -100,6 +100,38 @@ impl<E: Embedder> CobotVectorStore<E> {
         Ok(id_str)
     }
 
+    /// Return a reference to the underlying embedder
+    pub fn embedder(&self) -> &E {
+        &self.embedder
+    }
+
+    /// Store a pre-computed vector with document and metadata directly into HNSW storage
+    pub fn insert_vector(
+        &self,
+        id: impl Into<String>,
+        vector: Vec<f32>,
+        text: impl Into<String>,
+        metadata: Option<serde_json::Value>,
+    ) -> Result<String, AdapterError> {
+        let id_str = id.into();
+        if vector.len() != self.embedder.dimension() {
+            return Err(AdapterError::DimensionMismatch {
+                expected: self.embedder.dimension(),
+                actual: vector.len(),
+            });
+        }
+
+        let doc = Document {
+            id: id_str.clone(),
+            text: text.into(),
+            vector: Some(vector),
+            metadata,
+        };
+
+        self.docs.write().insert(id_str.clone(), doc);
+        Ok(id_str)
+    }
+
     /// Batch add multiple documents at once with efficient batched embedding.
     pub async fn add_batch(&self, docs: Vec<Document>) -> Result<Vec<String>, AdapterError> {
         if docs.is_empty() {

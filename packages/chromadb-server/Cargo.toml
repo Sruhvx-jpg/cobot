@@ -1,0 +1,19 @@
+[package]
+name = "chromadb-server"
+version = "0.1.0"
+edition = "2021"
+description = "High-speed Actix Web vector search and multipart ingest gateway powered by Sruhvx-jpg's HTTP QUERY fork"
+license = "Apache-2.0"
+
+[dependencies]
+actix-web = { git = "https://github.com/Sruhvx-jpg/actix-web.git", branch = "feat/http-query-method" }
+actix-multipart = "0.7"
+cobot-adapter = { path = "../chroma-engine/rust/cobot-adapter" }
+chroma-distance = { path = "../chroma-engine/rust/distance" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+futures-util = "0.3"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "fs"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = "1.0"
