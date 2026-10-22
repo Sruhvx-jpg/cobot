@@ -370,7 +370,12 @@ export async function createDaemonServer(
 
     // If an action is required, trigger an isolated background agent turn!
     if (action_required && content) {
-      const taskPrompt = `[Task Delegation from @${sender_id || "commander"} in channel ${channel_id || "general"}]\n${content}\n\n[Instruction]: Execute this task using available tools. When complete or if failed, invoke the 'sabha_mark_action' tool with mention_id='${mention_id}', session_id='${session_id}', and status='completed' or 'failed'.`;
+      const taskPrompt = `[Task Delegation from @${sender_id || "commander"} in channel ${channel_id || "general"}]\n${content}\n\n[MANDATORY INSTRUCTION]: Execute the requested task thoroughly using your available tools. Once you have completed the task or if you fail, you MUST invoke the 'sabha_mark_action' tool with:
+- mention_id: '${mention_id}'
+- session_id: '${session_id}'
+- status: 'completed' (or 'failed')
+- result: your full, detailed findings, answer, and report.
+This will immediately report your completed work back to @${sender_id || "commander"}.`;
 
       engine
         .run(
@@ -378,6 +383,9 @@ export async function createDaemonServer(
             prompt: taskPrompt,
             agentId,
             sessionId: session_id || `session_${mention_id}`,
+            modelName: "gemini-3.8-flash-high",
+            provider: "antigravity",
+            thinkingLevel: "low",
           },
           () => {}, // background run
         )

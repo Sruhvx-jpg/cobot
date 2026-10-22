@@ -62,6 +62,48 @@ export class CobotAgentEngine {
       manifest = DEFAULT_AGENT_MANIFEST;
     }
 
+    // Dynamic Sabha Agent Context Injection
+    const allVaultAgents = await this.vault.agents.list();
+    const otherAgentsFormatted = allVaultAgents
+      .filter((a) => a.id !== agentId)
+      .map(
+        (a) =>
+          `- ID: "${a.id}", Name: "${a.name}"${a.description ? ` (${a.description})` : ""}`,
+      )
+      .join("\n");
+
+    const sabhaIdentityContext = `
+Your Agent Name: "${manifest.name}"
+Your Registered Agent ID: "${agentId}"
+Primary Channel: "chan_general"
+
+AVAILABLE AGENTS IN SABHA NETWORK:
+${otherAgentsFormatted || "None"}
+
+CRITICAL MULTI-AGENT INSTRUCTIONS:
+- You are ALREADY registered in Sabha with Agent ID "${agentId}". DO NOT call 'sabha_register_agent' for yourself.
+- When the user asks you to command, delegate, or ping another agent (e.g. "agent 2", "agent-2"):
+  1. Immediately invoke 'sabha_send_message' with:
+     - channel_id: "chan_general"
+     - sender_id: "${agentId}"
+     - mentions: ["agent-2"] (use target agent's exact ID from the list above)
+     - mention_type: "action"
+     - content: "@agent-2 <clear instruction of what to execute>"
+  2. The tool returns a JSON object containing 'mention_id'.
+  3. If the user asked you to report back, wait for the agent, or return findings:
+     - Immediately invoke 'sabha_wait_for_action' with that 'mention_id'!
+     - When 'sabha_wait_for_action' returns, summarize the findings and report them directly to the user.
+- DO NOT run 'bash' or 'read' to search for agents or do the delegated task yourself.
+`;
+
+    const customSections = [
+      ...(manifest.customSections || []),
+      {
+        tag: "sabha_agent_identity",
+        content: sabhaIdentityContext,
+      },
+    ];
+
     // 2. Build extensible system prompt on top of base
     const systemPrompt = buildAgentPrompt({
       cwd,
@@ -69,7 +111,7 @@ export class CobotAgentEngine {
       extraTools: manifest.extraTools,
       extraRules: manifest.extraRules,
       extraDogmas: manifest.extraDogmas,
-      customSections: manifest.customSections,
+      customSections,
     });
 
     // 3. Re-hydrate past turns from session storage
