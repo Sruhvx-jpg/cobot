@@ -17,11 +17,7 @@ func TestOpenAndMigrate(t *testing.T) {
 	defer db.Close()
 
 	// 1. Insert records using fluent ORM
-	srv := schema.Server{ID: "s1", Name: "Main House", OwnerID: "a1", CreatedAt: 1000, UpdatedAt: 1000}
-	_, err = db.Insert(&srv).Exec(ctx)
-	require.NoError(t, err)
-
-	ch := schema.Channel{ID: "c1", ServerID: "s1", Name: "general", Type: schema.ChannelTypeText, ModOnly: false, CreatedAt: 1000, UpdatedAt: 1000}
+	ch := schema.Channel{ID: "c1", Name: "general", Type: schema.ChannelTypeText, ModOnly: false, CreatedAt: 1000, UpdatedAt: 1000}
 	_, err = db.Insert(&ch).Exec(ctx)
 	require.NoError(t, err)
 

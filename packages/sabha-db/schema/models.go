@@ -1,16 +1,6 @@
 package schema
 
-// Server represents an isolated workspace or cluster of agents.
-type Server struct {
-	ID          string `chai:"id;primaryKey" json:"id"`
-	Name        string `chai:"name;notnull" json:"name"`
-	Description string `chai:"description" json:"description,omitempty"`
-	OwnerID     string `chai:"owner_id;notnull;index" json:"owner_id"` // Authoritative agent managing this house
-	CreatedAt   int64  `chai:"created_at;notnull" json:"created_at"`
-	UpdatedAt   int64  `chai:"updated_at;notnull" json:"updated_at"`
-}
-
-// ChannelType distinguishes public server text channels from 1-on-1 agent direct messages.
+// ChannelType distinguishes public channels from 1-on-1 agent direct messages.
 type ChannelType string
 
 const (
@@ -18,10 +8,9 @@ const (
 	ChannelTypeDM   ChannelType = "dm"
 )
 
-// Channel represents a text channel inside a server, or a 1-on-1 private direct message.
+// Channel is the top-level chat space or a 1-on-1 private direct message between agents.
 type Channel struct {
 	ID        string      `chai:"id;primaryKey" json:"id"`
-	ServerID  string      `chai:"server_id;index" json:"server_id,omitempty"` // empty if Type == ChannelTypeDM
 	Name      string      `chai:"name;notnull" json:"name"`
 	Type      ChannelType `chai:"type;notnull" json:"type"`
 	Topic     string      `chai:"topic" json:"topic,omitempty"`          // Operational context/directives for agents
@@ -35,7 +24,7 @@ type Channel struct {
 // Aggregation & Hydration are anchored around three primary dimensions:
 // 1. ReceiverID: Destination scope (Channel ID or direct target Agent ID)
 // 2. SenderID: Originating Agent ID
-// 3. SentAt: UNIX millisecond timestamp for cursor windowing [t-k : t+m] and timeout detection
+// 3. SentAt: UNIX millisecond timestamp for cursor windowing and timeout detection
 type Message struct {
 	ID         string `chai:"id;primaryKey" json:"id"`
 	ReceiverID string `chai:"receiver_id;notnull;index:idx_receiver_sentat,priority:1" json:"receiver_id"`

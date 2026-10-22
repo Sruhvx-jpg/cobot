@@ -17,7 +17,6 @@ type DB struct {
 func Migrate(rawDB *sql.DB) error {
 	return chai.AutoMigrate(
 		rawDB,
-		&schema.Server{},
 		&schema.Channel{},
 		&schema.Message{},
 		&schema.Mention{},
