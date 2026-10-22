@@ -17,15 +17,53 @@ type Tabler interface {
 // AutoMigrate inspects the provided Go struct models via reflection,
 // derives table schemas, column types, constraints, and indexes,
 // and executes idempotent CREATE TABLE IF NOT EXISTS and CREATE INDEX IF NOT EXISTS DDL statements on db.
+// If the table already exists, it automatically adds any missing columns via ALTER TABLE ADD COLUMN.
 func AutoMigrate(db *sql.DB, models ...any) error {
 	for _, model := range models {
-		ddl, err := GenerateDDL(model)
+		val := reflect.ValueOf(model)
+		if val.Kind() == reflect.Pointer {
+			val = val.Elem()
+		}
+		if val.Kind() != reflect.Struct {
+			return fmt.Errorf("expected struct, got %s", val.Kind())
+		}
+		typ := val.Type()
+
+		tableName := ""
+		if tabler, ok := reflect.New(typ).Interface().(Tabler); ok {
+			tableName = tabler.TableName()
+		} else if tabler, ok := model.(Tabler); ok {
+			tableName = tabler.TableName()
+		} else {
+			tableName = toSnakeCase(typ.Name()) + "s"
+		}
+
+		ddl, columns, err := GenerateDDL(model)
 		if err != nil {
 			return fmt.Errorf("failed to generate DDL for %T: %w", model, err)
 		}
 
 		if _, err := db.Exec(ddl); err != nil {
 			return fmt.Errorf("migration failed for %T with DDL %q: %w", model, ddl, err)
+		}
+
+		// Check if existing table needs missing columns added
+		rows, err := db.Query(fmt.Sprintf("SELECT * FROM %s LIMIT 1", tableName))
+		if err == nil {
+			existingCols, colErr := rows.Columns()
+			_ = rows.Close()
+			if colErr == nil {
+				existingMap := make(map[string]bool)
+				for _, c := range existingCols {
+					existingMap[c] = true
+				}
+				for _, col := range columns {
+					if !existingMap[col.name] {
+						alterSQL := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", tableName, col.name, col.sqlType)
+						_, _ = db.Exec(alterSQL)
+					}
+				}
+			}
 		}
 	}
 	return nil
@@ -50,14 +88,14 @@ type indexedCol struct {
 	priority int
 }
 
-// GenerateDDL derives the SQL DDL for a given model struct.
-func GenerateDDL(model any) (string, error) {
+// GenerateDDL derives the SQL DDL and column definitions for a given model struct.
+func GenerateDDL(model any) (string, []columnDef, error) {
 	val := reflect.ValueOf(model)
 	if val.Kind() == reflect.Pointer {
 		val = val.Elem()
 	}
 	if val.Kind() != reflect.Struct {
-		return "", fmt.Errorf("expected struct, got %s", val.Kind())
+		return "", nil, fmt.Errorf("expected struct, got %s", val.Kind())
 	}
 
 	typ := val.Type()
@@ -114,7 +152,7 @@ func GenerateDDL(model any) (string, error) {
 	}
 
 	if len(columns) == 0 {
-		return "", fmt.Errorf("model %s has no exported columns", typ.Name())
+		return "", nil, fmt.Errorf("model %s has no exported columns", typ.Name())
 	}
 
 	var sb strings.Builder
@@ -165,7 +203,7 @@ func GenerateDDL(model any) (string, error) {
 		sb.WriteString(fmt.Sprintf("CREATE INDEX IF NOT EXISTS %s ON %s(%s);\n", idxName, tableName, strings.Join(colNames, ", ")))
 	}
 
-	return sb.String(), nil
+	return sb.String(), columns, nil
 }
 
 func getColumnName(field reflect.StructField, tag string) string {

@@ -278,6 +278,7 @@ func ProcessSendMessage(db *sabhadb.DB, registry *sync.Map, w http.ResponseWrite
 	})
 
 	if err != nil {
+		fmt.Printf("[Sabha Message Error] Failed to send message: %v\n", err)
 		WriteAPIError(w, InternalErr("failed to send message").Wrap(err))
 		return
 	}
