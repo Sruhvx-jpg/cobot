@@ -60,11 +60,14 @@ export function useSessions(activeAgentId = DEFAULT_AGENT_ID) {
   }, [activeAgentId]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(SESSIONS_KEY, JSON.stringify(allSessions));
-    } catch (err) {
-      console.error("Failed to save sessions to localStorage:", err);
-    }
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(SESSIONS_KEY, JSON.stringify(allSessions));
+      } catch (err) {
+        console.error("Failed to save sessions to localStorage:", err);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
   }, [allSessions]);
 
   const activeSession: Session = visibleSessions.find(

@@ -61,6 +61,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             <div className="p-2 text-[var(--text-muted)]">
               <LoadingDots />
             </div>
+          ) : !message.tools || message.tools.length === 0 ? (
+            <div className="bg-[var(--bubble-agent)]/30 border border-dashed border-[var(--border)] px-3 py-2 smooth-corners text-xs text-[var(--text-muted)] italic max-w-2xl">
+              No response generated.
+            </div>
           ) : null}
         </div>
       </div>

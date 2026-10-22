@@ -46,12 +46,14 @@ export async function getAvailableModels(): Promise<ModelDescriptor[]> {
         const data = await res.json();
         const rawModels = data.models || {};
         for (const [key, val] of Object.entries(rawModels)) {
-          // Filter internal telemetry, tab completions, and disabled models
+          // Filter internal telemetry, tab completions, disabled, and deprecated models
           if (
             key.startsWith("tab_") ||
             key.startsWith("chat_") ||
             key.includes("disabled") ||
-            key.includes("image")
+            key.includes("image") ||
+            key.includes("3.5-flash") ||
+            key.includes("3-flash-agent")
           ) {
             continue;
           }
@@ -90,8 +92,18 @@ export async function getAvailableModels(): Promise<ModelDescriptor[]> {
           }
         }
 
-        // Add clean grouped models
-        for (const [cleanLabel, group] of groupedAntigravity.entries()) {
+        // Sort so Gemini 3.8 Flash and Claude Sonnet appear at the top
+        const sortedGroups = Array.from(groupedAntigravity.entries()).sort(
+          ([a], [b]) => {
+            if (a.includes("3.8 Flash")) return -1;
+            if (b.includes("3.8 Flash")) return 1;
+            if (a.includes("Sonnet")) return -1;
+            if (b.includes("Sonnet")) return 1;
+            return a.localeCompare(b);
+          },
+        );
+
+        for (const [cleanLabel, group] of sortedGroups) {
           modelVariantMap.set(group.defaultId, group.variants);
           modelVariantMap.set(cleanLabel.toLowerCase(), group.variants);
 

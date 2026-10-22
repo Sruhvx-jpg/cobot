@@ -70,103 +70,139 @@ export function useAgentStream(
       const decoder = new TextDecoder("utf-8");
       let buffer = "";
 
+      const handleEvent = (event: any) => {
+        switch (event.type) {
+          case "TEXT_MESSAGE_CONTENT": {
+            const delta = event.delta || "";
+            updateMessages(sessionId, (prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, content: msg.content + delta }
+                  : msg,
+              ),
+            );
+            break;
+          }
+
+          case "REASONING_MESSAGE_CONTENT": {
+            const delta = event.delta || "";
+            updateMessages(sessionId, (prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, reasoning: (msg.reasoning || "") + delta }
+                  : msg,
+              ),
+            );
+            break;
+          }
+
+          case "TOOL_CALL_START": {
+            const { toolCallId, toolName, args } = event;
+            updateMessages(sessionId, (prev) =>
+              prev.map((msg) => {
+                if (msg.id !== assistantMessageId) return msg;
+                const tools = msg.tools ? [...msg.tools] : [];
+                tools.push({
+                  id: toolCallId,
+                  name: toolName,
+                  args,
+                  status: "running",
+                });
+                return { ...msg, tools };
+              }),
+            );
+            break;
+          }
+
+          case "TOOL_CALL_RESULT": {
+            const { toolCallId, isError, durationMs } = event;
+            updateMessages(sessionId, (prev) =>
+              prev.map((msg) => {
+                if (msg.id !== assistantMessageId) return msg;
+                const tools = (msg.tools || []).map((t) =>
+                  t.id === toolCallId
+                    ? {
+                        ...t,
+                        status: isError
+                          ? ("error" as const)
+                          : ("completed" as const),
+                        isError,
+                        durationMs,
+                      }
+                    : t,
+                );
+                return { ...msg, tools };
+              }),
+            );
+            break;
+          }
+
+          case "RUN_ERROR": {
+            updateMessages(sessionId, (prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? {
+                      ...msg,
+                      content: msg.content + `\n[Error: ${event.message}]`,
+                    }
+                  : msg,
+              ),
+            );
+            break;
+          }
+        }
+      };
+
+      const processChunk = (chunkText: string) => {
+        const trimmed = chunkText.trim();
+        if (!trimmed) return;
+
+        let payload = "";
+        const lines = trimmed.split("\n");
+        for (const line of lines) {
+          const l = line.trim();
+          if (l.startsWith("data:")) {
+            payload += l.slice(5).trim();
+          } else if (
+            l &&
+            !l.startsWith("event:") &&
+            !l.startsWith("id:") &&
+            !l.startsWith(":")
+          ) {
+            payload += l;
+          }
+        }
+
+        if (!payload) return;
+
+        try {
+          const event = JSON.parse(payload);
+          handleEvent(event);
+        } catch (err) {
+          console.error(
+            "[useAgentStream] Failed to parse SSE JSON:",
+            err,
+            "Payload:",
+            payload,
+          );
+        }
+      };
+
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          if (buffer.trim()) {
+            processChunk(buffer);
+          }
+          break;
+        }
 
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n\n");
-        buffer = lines.pop() || "";
+        const chunks = buffer.split("\n\n");
+        buffer = chunks.pop() || "";
 
-        for (const line of lines) {
-          const match = line.match(/^data:\s*(.+)$/m);
-          if (!match) continue;
-
-          try {
-            const event = JSON.parse(match[1]);
-            switch (event.type) {
-              case "TEXT_MESSAGE_CONTENT": {
-                const delta = event.delta || "";
-                updateMessages(sessionId, (prev) =>
-                  prev.map((msg) =>
-                    msg.id === assistantMessageId
-                      ? { ...msg, content: msg.content + delta }
-                      : msg,
-                  ),
-                );
-                break;
-              }
-
-              case "REASONING_MESSAGE_CONTENT": {
-                const delta = event.delta || "";
-                updateMessages(sessionId, (prev) =>
-                  prev.map((msg) =>
-                    msg.id === assistantMessageId
-                      ? { ...msg, reasoning: (msg.reasoning || "") + delta }
-                      : msg,
-                  ),
-                );
-                break;
-              }
-
-              case "TOOL_CALL_START": {
-                const { toolCallId, toolName, args } = event;
-                updateMessages(sessionId, (prev) =>
-                  prev.map((msg) => {
-                    if (msg.id !== assistantMessageId) return msg;
-                    const tools = msg.tools ? [...msg.tools] : [];
-                    tools.push({
-                      id: toolCallId,
-                      name: toolName,
-                      args,
-                      status: "running",
-                    });
-                    return { ...msg, tools };
-                  }),
-                );
-                break;
-              }
-
-              case "TOOL_CALL_RESULT": {
-                const { toolCallId, isError, durationMs } = event;
-                updateMessages(sessionId, (prev) =>
-                  prev.map((msg) => {
-                    if (msg.id !== assistantMessageId) return msg;
-                    const tools = (msg.tools || []).map((t) =>
-                      t.id === toolCallId
-                        ? {
-                            ...t,
-                            status: isError
-                              ? ("error" as const)
-                              : ("completed" as const),
-                            isError,
-                            durationMs,
-                          }
-                        : t,
-                    );
-                    return { ...msg, tools };
-                  }),
-                );
-                break;
-              }
-
-              case "RUN_ERROR": {
-                updateMessages(sessionId, (prev) =>
-                  prev.map((msg) =>
-                    msg.id === assistantMessageId
-                      ? {
-                          ...msg,
-                          content: msg.content + `\n[Error: ${event.message}]`,
-                        }
-                      : msg,
-                  ),
-                );
-                break;
-              }
-            }
-          } catch {
-            // Ignore parse errors on keepalive comments
-          }
+        for (const chunk of chunks) {
+          processChunk(chunk);
         }
       }
     } catch (err) {
