@@ -4,6 +4,7 @@
   "private": true,
   "description": "Sabha Server Daemon [unstable-alpha-prototype.V0]",
   "scripts": {
+    "dev": "cd src && go run .",
     "build": "cd src && go build ./...",
     "check-types": "cd src && go vet ./..."
   }

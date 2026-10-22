@@ -11,15 +11,12 @@ import (
 
 func main() {
 	dbPath := os.Getenv("SABHA_DB_PATH")
-	if dbPath == "" {
-		dbPath = "sabha.db"
-	}
-
 	db, err := sabhadb.Open(dbPath)
 	if err != nil {
 		log.Fatalf("failed to open sabha database: %v", err)
 	}
 	defer func() { _ = db.Close() }()
+	log.Printf("Sabha database connected at: %s", db.Path)
 
 	port := os.Getenv("PORT")
 	if port == "" {
