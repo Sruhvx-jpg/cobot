@@ -46,6 +46,8 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  apps/chromadb-server: {}
+
   apps/desktop:
     dependencies:
       '@cobot/ts-shared':
@@ -197,8 +199,6 @@ importers:
   packages/chai-engine: {}
 
   packages/chroma-engine: {}
-
-  packages/chromadb-server: {}
 
   packages/sabha-db: {}
 
