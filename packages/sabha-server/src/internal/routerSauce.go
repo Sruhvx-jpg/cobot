@@ -32,21 +32,16 @@ func WriteJSON(w http.ResponseWriter, status int, data any) {
 	_ = json.NewEncoder(w).Encode(data)
 }
 
-// WriteError sends a JSON error response.
-func WriteError(w http.ResponseWriter, status int, message string) {
-	WriteJSON(w, status, map[string]string{"error": message})
-}
-
 // HandleRegisterAgent registers a new agent into Sabha.
 func HandleRegisterAgent(db *sabhadb.DB, w http.ResponseWriter, r *http.Request) {
 	var req RegisterAgentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, http.StatusBadRequest, "invalid json payload")
+		WriteAPIError(w, BadReq("invalid json payload"))
 		return
 	}
 
 	if strings.TrimSpace(req.Name) == "" {
-		WriteError(w, http.StatusBadRequest, "name is required")
+		WriteAPIError(w, BadReq("name is required"))
 		return
 	}
 
@@ -64,7 +59,7 @@ func HandleRegisterAgent(db *sabhadb.DB, w http.ResponseWriter, r *http.Request)
 	}
 
 	if _, err := db.Insert(&agent).Exec(r.Context()); err != nil {
-		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("failed to register agent: %s", err.Error()))
+		WriteAPIError(w, InternalErr("failed to register agent").Wrap(err))
 		return
 	}
 
@@ -75,13 +70,13 @@ func HandleRegisterAgent(db *sabhadb.DB, w http.ResponseWriter, r *http.Request)
 func HandleCreateChannel(db *sabhadb.DB, w http.ResponseWriter, r *http.Request) {
 	var req CreateChannelRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, http.StatusBadRequest, "invalid json payload")
+		WriteAPIError(w, BadReq("invalid json payload"))
 		return
 	}
 
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
-		WriteError(w, http.StatusBadRequest, "channel name is required")
+		WriteAPIError(w, BadReq("channel name is required"))
 		return
 	}
 
@@ -97,7 +92,7 @@ func HandleCreateChannel(db *sabhadb.DB, w http.ResponseWriter, r *http.Request)
 	}
 
 	if _, err := db.Insert(&ch).Exec(r.Context()); err != nil {
-		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("failed to create channel: %s", err.Error()))
+		WriteAPIError(w, InternalErr("failed to create channel").Wrap(err))
 		return
 	}
 
@@ -113,7 +108,7 @@ func HandleListChannels(db *sabhadb.DB, w http.ResponseWriter, r *http.Request) 
 		Find(r.Context(), &channels)
 
 	if err != nil {
-		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("failed to list channels: %s", err.Error()))
+		WriteAPIError(w, InternalErr("failed to list channels").Wrap(err))
 		return
 	}
 
@@ -124,13 +119,13 @@ func HandleListChannels(db *sabhadb.DB, w http.ResponseWriter, r *http.Request) 
 func HandleSendChannelMessage(db *sabhadb.DB, w http.ResponseWriter, r *http.Request) {
 	channelID := chi.URLParam(r, "channelID")
 	if channelID == "" {
-		WriteError(w, http.StatusBadRequest, "channelID is required")
+		WriteAPIError(w, BadReq("channelID is required"))
 		return
 	}
 
 	var req SendMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, http.StatusBadRequest, "invalid json payload")
+		WriteAPIError(w, BadReq("invalid json payload"))
 		return
 	}
 	req.ReceiverID = channelID
@@ -142,7 +137,7 @@ func HandleSendChannelMessage(db *sabhadb.DB, w http.ResponseWriter, r *http.Req
 func HandleSendMessage(db *sabhadb.DB, w http.ResponseWriter, r *http.Request) {
 	var req SendMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, http.StatusBadRequest, "invalid json payload")
+		WriteAPIError(w, BadReq("invalid json payload"))
 		return
 	}
 
@@ -154,15 +149,15 @@ func ProcessSendMessage(db *sabhadb.DB, w http.ResponseWriter, r *http.Request, 
 	ctx := r.Context()
 
 	if strings.TrimSpace(req.ReceiverID) == "" {
-		WriteError(w, http.StatusBadRequest, "receiver_id is required")
+		WriteAPIError(w, BadReq("receiver_id is required"))
 		return
 	}
 	if strings.TrimSpace(req.SenderID) == "" {
-		WriteError(w, http.StatusBadRequest, "sender_id is required (identifies the agent)")
+		WriteAPIError(w, BadReq("sender_id is required"))
 		return
 	}
 	if strings.TrimSpace(req.Content) == "" {
-		WriteError(w, http.StatusBadRequest, "content cannot be empty")
+		WriteAPIError(w, BadReq("content cannot be empty"))
 		return
 	}
 
@@ -173,7 +168,7 @@ func ProcessSendMessage(db *sabhadb.DB, w http.ResponseWriter, r *http.Request, 
 		Where("id = ?", req.ReceiverID).
 		First(ctx, &channel)
 	if err != nil {
-		WriteError(w, http.StatusNotFound, "channel not found")
+		WriteAPIError(w, NotFound("channel not found").Wrap(err))
 		return
 	}
 
@@ -220,7 +215,7 @@ func ProcessSendMessage(db *sabhadb.DB, w http.ResponseWriter, r *http.Request, 
 	})
 
 	if err != nil {
-		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("failed to send message: %s", err.Error()))
+		WriteAPIError(w, InternalErr("failed to send message").Wrap(err))
 		return
 	}
 

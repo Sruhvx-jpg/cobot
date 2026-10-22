@@ -10,6 +10,7 @@ import (
 	sabhadb "github.com/Sruhvx-jpg/cobot/packages/sabha-db"
 	"github.com/Sruhvx-jpg/cobot/packages/sabha-db/schema"
 	sabhaserver "github.com/Sruhvx-jpg/cobot/packages/sabha-server/src"
+	"github.com/Sruhvx-jpg/cobot/packages/sabha-server/src/internal"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,6 +38,7 @@ func TestAgentRegistration(t *testing.T) {
 	db, srv := setupTestServer(t)
 	defer db.Close()
 
+	// 1. Success case
 	body := []byte(`{"name":"reviewer-agent", "role":"reviewer"}`)
 	req := httptest.NewRequest("POST", "/agents/register", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
@@ -51,6 +53,20 @@ func TestAgentRegistration(t *testing.T) {
 	require.Equal(t, "reviewer-agent", agent.Name)
 	require.Equal(t, "reviewer", agent.Role)
 	require.Equal(t, schema.AgentStatusIdle, agent.Status)
+
+	// 2. Error case: Missing name -> standardized BadReq APIError
+	errBody := []byte(`{"role":"reviewer"}`)
+	errReq := httptest.NewRequest("POST", "/agents/register", bytes.NewReader(errBody))
+	errRec := httptest.NewRecorder()
+
+	srv.Router().ServeHTTP(errRec, errReq)
+	require.Equal(t, http.StatusBadRequest, errRec.Code)
+
+	var apiErr internal.APIError
+	require.NoError(t, json.Unmarshal(errRec.Body.Bytes(), &apiErr))
+	require.Equal(t, http.StatusBadRequest, apiErr.StatusCode)
+	require.Equal(t, "name is required", apiErr.Message)
+	require.True(t, apiErr.IsOperational)
 }
 
 func TestCreateAndListChannels(t *testing.T) {
@@ -125,4 +141,16 @@ func TestSendMessageToChannel(t *testing.T) {
 		Find(t.Context(), &mentions)
 	require.NoError(t, err)
 	require.Len(t, mentions, 2)
+
+	// 4. Non-existent channel -> standardized NotFound APIError
+	badReq := httptest.NewRequest("POST", "/channels/chan_nonexistent/messages", bytes.NewReader(msgPayload))
+	badRec := httptest.NewRecorder()
+	srv.Router().ServeHTTP(badRec, badReq)
+	require.Equal(t, http.StatusNotFound, badRec.Code)
+
+	var apiErr internal.APIError
+	require.NoError(t, json.Unmarshal(badRec.Body.Bytes(), &apiErr))
+	require.Equal(t, http.StatusNotFound, apiErr.StatusCode)
+	require.Equal(t, "channel not found", apiErr.Message)
+	require.True(t, apiErr.IsOperational)
 }
