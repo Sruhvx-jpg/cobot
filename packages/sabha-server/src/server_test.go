@@ -9,7 +9,7 @@ import (
 
 	sabhadb "github.com/Sruhvx-jpg/cobot/packages/sabha-db"
 	"github.com/Sruhvx-jpg/cobot/packages/sabha-db/schema"
-	sabhaserver "github.com/Sruhvx-jpg/cobot/packages/sabha-server"
+	sabhaserver "github.com/Sruhvx-jpg/cobot/packages/sabha-server/src"
 	"github.com/stretchr/testify/require"
 )
 
@@ -124,5 +124,5 @@ func TestSendMessageToChannel(t *testing.T) {
 		Where("message_id = ?", msg.ID).
 		Find(t.Context(), &mentions)
 	require.NoError(t, err)
-	require.Len(t, mentions, 2) // agent_beta (from text regex) and agent_gamma (from explicit list)
+	require.Len(t, mentions, 2)
 }

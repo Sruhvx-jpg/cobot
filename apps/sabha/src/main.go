@@ -6,7 +6,7 @@ import (
 	"os"
 
 	sabhadb "github.com/Sruhvx-jpg/cobot/packages/sabha-db"
-	sabhaserver "github.com/Sruhvx-jpg/cobot/packages/sabha-server"
+	sabhaserver "github.com/Sruhvx-jpg/cobot/packages/sabha-server/src"
 )
 
 func main() {
