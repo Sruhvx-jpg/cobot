@@ -57,7 +57,11 @@ function sanitizeGeminiSchema(schema: any): any {
 
   const clean: Record<string, any> = {};
   for (const [key, value] of Object.entries(schema)) {
-    if (key === "$schema" || key === "additionalProperties") {
+    if (
+      key === "$schema" ||
+      key === "additionalProperties" ||
+      key === "patternProperties"
+    ) {
       continue;
     }
     if (key === "const") {

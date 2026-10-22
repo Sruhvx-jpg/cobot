@@ -48,8 +48,8 @@ export const VectorUpsertParamsSchema = Type.Object({
     description: "Raw text content to embed and store in vector memory",
   }),
   metadata: Type.Optional(
-    Type.Record(Type.String(), Type.Any(), {
-      description: "Optional metadata key-value pairs",
+    Type.String({
+      description: "Optional metadata tags or JSON string",
     }),
   ),
 });

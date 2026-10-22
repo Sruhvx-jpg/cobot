@@ -118,11 +118,20 @@ export async function executeVectorSearch(
 export async function executeVectorUpsert(
   id: string,
   text: string,
-  metadata?: Record<string, any>,
+  metadata?: Record<string, any> | string,
 ) {
   try {
     const baseUrl = await getChromaBaseUrl();
     const endpoint = `${baseUrl}/documents/${encodeURIComponent(id)}`;
+
+    let parsedMetadata: any = metadata;
+    if (typeof metadata === "string") {
+      try {
+        parsedMetadata = JSON.parse(metadata);
+      } catch {
+        parsedMetadata = { tags: metadata };
+      }
+    }
 
     const res = await fetch(endpoint, {
       method: "PUT",
@@ -131,7 +140,7 @@ export async function executeVectorUpsert(
       },
       body: JSON.stringify({
         text,
-        metadata: metadata || null,
+        metadata: parsedMetadata || null,
       }),
     });
 
