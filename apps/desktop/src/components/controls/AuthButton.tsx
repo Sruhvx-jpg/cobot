@@ -29,18 +29,27 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
   const handleLogin = async () => {
     try {
       setLoading(true);
-      // If remote VM, desktop initiates login locally on 3000 then pushes creds to VM
-      const authOrigin = isRemote ? "http://localhost:3000" : apiUrl("");
-      const startUrl = `${authOrigin}/api/auth/antigravity/start`;
-      const statusUrl = `${authOrigin}/api/auth/status`;
+      const startUrl = isRemote
+        ? "http://localhost:3000/api/auth/antigravity/start"
+        : apiUrl("/api/auth/antigravity/start");
+      const statusUrl = isRemote
+        ? "http://localhost:3000/api/auth/status"
+        : apiUrl("/api/auth/status");
 
       const res = await fetch(startUrl, {
         method: "POST",
       });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
       const data = await res.json();
       if (data.authUrl) {
         setAuthUrl(data.authUrl);
-        window.open(data.authUrl, "_blank");
+        try {
+          window.open(data.authUrl, "_blank");
+        } catch {
+          // WebKitGTK restricted popup fallback
+        }
 
         // Poll for completion
         const interval = setInterval(async () => {

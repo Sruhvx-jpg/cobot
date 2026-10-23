@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 
 interface EndpointContextType {
   endpoint: string;
@@ -27,35 +33,42 @@ export const EndpointProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const isRemote = endpoint !== DEFAULT_ENDPOINT;
 
-  const setEndpoint = (url: string) => {
+  const setEndpoint = useCallback((url: string) => {
     const trimmed = url.trim().replace(/\/+$/, "");
     const finalUrl = trimmed || DEFAULT_ENDPOINT;
     setEndpointState(finalUrl);
     localStorage.setItem("cobot_endpoint", finalUrl);
-  };
+  }, []);
 
-  const apiUrl = (path: string) => {
-    const cleanPath = path.startsWith("/") ? path : `/${path}`;
-    return `${endpoint}${cleanPath}`;
-  };
+  const apiUrl = useCallback(
+    (path: string) => {
+      if (!path) return endpoint;
+      const cleanPath = path.startsWith("/") ? path : `/${path}`;
+      return `${endpoint}${cleanPath}`;
+    },
+    [endpoint],
+  );
 
-  const syncCredentialsToRemote = async (creds: unknown): Promise<boolean> => {
-    if (!isRemote) return false;
-    try {
-      const res = await fetch(apiUrl("/api/auth/sync"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ credentials: creds }),
-      });
-      return res.ok;
-    } catch (err) {
-      console.error(
-        "[EndpointContext] Failed to sync credentials to remote:",
-        err,
-      );
-      return false;
-    }
-  };
+  const syncCredentialsToRemote = useCallback(
+    async (creds: unknown): Promise<boolean> => {
+      if (!isRemote) return false;
+      try {
+        const res = await fetch(apiUrl("/api/auth/sync"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credentials: creds }),
+        });
+        return res.ok;
+      } catch (err) {
+        console.error(
+          "[EndpointContext] Failed to sync credentials to remote:",
+          err,
+        );
+        return false;
+      }
+    },
+    [isRemote, apiUrl],
+  );
 
   return (
     <EndpointContext.Provider
