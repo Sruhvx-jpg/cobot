@@ -1,5 +1,11 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import { spawn, exec } from "node:child_process";
+import { promisify } from "node:util";
+import { readFile, unlink } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { AGUITransport } from "./ag-ui.js";
 import { CobotAgentEngine } from "./engine.js";
 import {
@@ -146,6 +152,111 @@ export async function createDaemonServer(
       res.json({
         authenticated: !!auth || models.length > 0,
         models,
+      });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  /** --- System Tunnel & Remote Seeding Endpoints --- */
+  const execAsync = promisify(exec);
+  const tunnelRuntimePath = join(homedir(), ".cobot", "runtime", "tunnel.json");
+
+  app.get("/api/system/tunnel", async (_req, res) => {
+    try {
+      if (existsSync(tunnelRuntimePath)) {
+        const raw = await readFile(tunnelRuntimePath, "utf-8");
+        return res.json({ active: true, ...JSON.parse(raw) });
+      }
+      res.json({ active: false });
+    } catch {
+      res.json({ active: false });
+    }
+  });
+
+  let activeTunnelProc: any = null;
+
+  app.post("/api/system/tunnel/start", async (_req, res) => {
+    try {
+      if (activeTunnelProc && existsSync(tunnelRuntimePath)) {
+        const raw = await readFile(tunnelRuntimePath, "utf-8");
+        return res.json({ active: true, ...JSON.parse(raw) });
+      }
+
+      const scriptPath = join(process.cwd(), "scripts", "tunnel-pair.sh");
+      const resolvedScript = existsSync(scriptPath)
+        ? scriptPath
+        : join(
+            homedir(),
+            "Documents",
+            "programming",
+            "cobot",
+            "scripts",
+            "tunnel-pair.sh",
+          );
+
+      activeTunnelProc = spawn("bash", [resolvedScript], {
+        env: { ...process.env, PORT: port.toString() },
+        detached: true,
+        stdio: "ignore",
+      });
+      activeTunnelProc.unref();
+
+      for (let i = 0; i < 30; i++) {
+        await new Promise((r) => setTimeout(r, 500));
+        if (existsSync(tunnelRuntimePath)) {
+          const raw = await readFile(tunnelRuntimePath, "utf-8");
+          return res.json({ active: true, ...JSON.parse(raw) });
+        }
+      }
+
+      res.status(504).json({ error: "Tunnel startup timed out" });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  app.post("/api/system/tunnel/stop", async (_req, res) => {
+    try {
+      if (existsSync(tunnelRuntimePath)) {
+        try {
+          const raw = await readFile(tunnelRuntimePath, "utf-8");
+          const data = JSON.parse(raw);
+          if (data.pid) {
+            process.kill(data.pid, "SIGTERM");
+          }
+        } catch {}
+        await unlink(tunnelRuntimePath).catch(() => {});
+      }
+      activeTunnelProc = null;
+      res.json({ active: false, ok: true });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  app.post("/api/system/seed", async (req, res) => {
+    const { target } = req.body;
+    if (!target) {
+      return res.status(400).json({ error: "Missing 'target' parameter" });
+    }
+
+    try {
+      const cobotHome = process.env.COBOT_HOME || join(homedir(), ".cobot");
+      let command = "";
+
+      if (target.startsWith("instabox:")) {
+        const boxName = target.replace(/^instabox:/, "").trim();
+        command = `tar czf - -C "${cobotHome}" . | instabox exec ${boxName} -- bash -c "mkdir -p /data/home/.cobot && tar xzf - -C /data/home/.cobot"`;
+      } else {
+        command = `tar czf - -C "${cobotHome}" . | ssh -C ${target} "mkdir -p ~/.cobot && tar xzf - -C ~/.cobot"`;
+      }
+
+      await execAsync(command, { timeout: 60000 });
+      res.json({
+        ok: true,
+        target,
+        message: "Ecosystem successfully seeded to target node",
       });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
