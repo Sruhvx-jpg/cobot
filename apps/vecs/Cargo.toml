@@ -1,0 +1,14 @@
+[package]
+name = "vecs"
+version = "0.1.0"
+edition = "2021"
+description = "VecS - High-speed vector search engine daemon powered by USearch, SQLite, and EmbeddingGemma 2"
+license = "Apache-2.0"
+
+[dependencies]
+embedding-gemma-vecs = { path = "../../packages/embedding-gemma-vecs" }
+actix-web = "4"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"

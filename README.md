@@ -12,7 +12,8 @@ cobot/
 │   ├── agent-daemon/     # Ultra-lean Express.js AG-UI daemon runner (port 3000)
 │   ├── desktop/          # Tauri 2.0 desktop frontend shell + Vite + React + Tailwind
 │   ├── sabha/            # Go microservice chat & coordination hub runner [unstable-alpha-prototype.V0]
-│   └── tracer-duty/      # Go microservice for agent step tracing and logging
+│   ├── tracer-duty/      # Go microservice for agent step tracing and logging
+│   └── vecs/             # VecS Actix vector search daemon powered by EmbeddingGemma 2
 │
 ├── packages/
 │   ├── agent-core/       # Headless turn-loop agent engine (extracted directly from Pi)
@@ -21,7 +22,7 @@ cobot/
 │   ├── sabha-db/         # Sabha database access layer, schemas, and ChaiSQL migrations
 │   ├── sabha-server/     # Central router, HTTP API handlers, and webhook dispatcher for Sabha
 │   ├── chai-engine/      # Embedded Pebble SQL engine, native ORM, and reflection migrator
-│   ├── chroma-engine/    # In-process Rust vector database core
+│   ├── embedding-gemma-vecs/# High-speed USearch & SQLite vector engine with EmbeddingGemma 2
 │   ├── tools/            # Built-in tools & sauce/ execution implementations
 │   ├── vault/            # General-purpose inode storage with lookup index & code encryption
 │   ├── adaptor/          # MCP tool adapter for agents to connect with Sabha & microservices

@@ -43,5 +43,7 @@ yarn-error.log*
 target/
 1/
 **/src-tauri/gen/
+*.traineddata
+data/
 
 

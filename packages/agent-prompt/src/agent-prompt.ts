@@ -27,12 +27,12 @@ const BASE_TOOLS: ToolDefinition[] = [
   {
     name: "vector_search",
     description:
-      "Search long-term semantic vector memory using ChromaDB for past architectural decisions, notes, code context, or session memory.",
+      "Search long-term semantic vector memory using VecS (powered by EmbeddingGemma 2) for past architectural decisions, notes, code context, or session memory.",
   },
   {
     name: "vector_upsert",
     description:
-      "Save a document, architecture decision, or important technical note into long-term semantic vector memory so it can be recalled in future queries.",
+      "Save a document, architecture decision, or technical note into long-term semantic vector memory via VecS (powered by EmbeddingGemma 2) so it can be recalled in future queries.",
   },
   {
     name: "sabha_register_agent",

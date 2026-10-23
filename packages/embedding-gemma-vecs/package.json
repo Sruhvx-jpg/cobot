@@ -1,0 +1,11 @@
+{
+  "name": "@cobot/embedding-gemma-vecs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "High-throughput Actix Web vector search library powered by USearch, SQLite, and EmbeddingGemma 2",
+  "type": "module",
+  "scripts": {
+    "build": "cargo build",
+    "check-types": "true"
+  }
+}

@@ -131,9 +131,9 @@ jobs:
         with:
           work-dir: apps/sabha/src
 
-  # In-Process Vector Engine & Adapter Verification (Chroma Rust Core)
-  chroma-engine:
-    name: Chroma Vector Engine (Rust)
+  # VecS Vector Engine & EmbeddingGemma Verification (Rust Core)
+  vecs-engine:
+    name: VecS Vector Engine (Rust)
     runs-on: ubuntu-latest
     env:
       RUST_MIN_STACK_SIZE: 8388608
@@ -141,20 +141,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Setup Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cargo Check (Chroma Rust Core)
-        run: cargo check --manifest-path packages/chroma-engine/Cargo.toml -p cobot-adapter
+      - name: Cargo Check (EmbeddingGemma-VecS Package)
+        run: cargo check --manifest-path packages/embedding-gemma-vecs/Cargo.toml
 
-      - name: Run Adapter Unit Tests
-        run: cargo test --manifest-path packages/chroma-engine/Cargo.toml -p cobot-adapter
+      - name: Run EmbeddingGemma-VecS Unit Tests
+        run: cargo test --manifest-path packages/embedding-gemma-vecs/Cargo.toml
 
-      - name: Cargo Check (ChromaDB Actix Server)
-        run: cargo check --manifest-path apps/chromadb-server/Cargo.toml
+      - name: Cargo Check (VecS Daemon App)
+        run: cargo check --manifest-path apps/vecs/Cargo.toml
 

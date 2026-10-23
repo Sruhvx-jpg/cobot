@@ -3,12 +3,12 @@ import type { AgentTool } from "@cobot/agent-core";
 import { executeRead } from "./sauce/read.js";
 import { executeWrite } from "./sauce/write.js";
 import { executeBash } from "./sauce/bash.js";
-import { executeVectorSearch, executeVectorUpsert } from "./sauce/chroma.js";
+import { executeVectorSearch, executeVectorUpsert } from "./sauce/vecs.js";
 
 export * from "./sauce/read.js";
 export * from "./sauce/write.js";
 export * from "./sauce/bash.js";
-export * from "./sauce/chroma.js";
+export * from "./sauce/vecs.js";
 export * from "./utils/path.js";
 export * from "./utils/exec.js";
 
@@ -40,6 +40,11 @@ export const VectorSearchParamsSchema = Type.Object({
       description: "Optional minimum similarity score threshold (0.0 to 1.0)",
     }),
   ),
+  doc_name: Type.Optional(
+    Type.String({
+      description: "Optional document name or file to scope the search within",
+    }),
+  ),
 });
 
 export const VectorUpsertParamsSchema = Type.Object({
@@ -47,6 +52,12 @@ export const VectorUpsertParamsSchema = Type.Object({
   text: Type.String({
     description: "Raw text content to embed and store in vector memory",
   }),
+  doc_name: Type.Optional(
+    Type.String({
+      description:
+        "Optional document name or filename (e.g. auth.rs, README.md)",
+    }),
+  ),
   metadata: Type.Optional(
     Type.String({
       description: "Optional metadata tags or JSON string",
@@ -94,13 +105,18 @@ export function createBaseTools(cwd: string): AgentTool[] {
     name: "vector_search",
     label: "Vector Memory Search",
     description:
-      "Search long-term semantic vector memory using ChromaDB microservice over HTTP QUERY.",
+      "Search long-term semantic vector memory using VecS (powered by EmbeddingGemma 2) for past architectural decisions, notes, code context, or session memory.",
     parameters: VectorSearchParamsSchema,
     execute: async (
       _toolCallId,
       params: Static<typeof VectorSearchParamsSchema>,
     ) => {
-      return executeVectorSearch(params.query, params.top_k, params.min_score);
+      return executeVectorSearch(
+        params.query,
+        params.top_k,
+        params.min_score,
+        params.doc_name,
+      );
     },
   };
 
@@ -108,13 +124,18 @@ export function createBaseTools(cwd: string): AgentTool[] {
     name: "vector_upsert",
     label: "Vector Memory Upsert",
     description:
-      "Store or update a document in long-term semantic vector memory via ChromaDB microservice over HTTP PUT.",
+      "Save a document, architecture decision, or technical note into long-term semantic vector memory via VecS (powered by EmbeddingGemma 2) so it can be recalled in future queries.",
     parameters: VectorUpsertParamsSchema,
     execute: async (
       _toolCallId,
       params: Static<typeof VectorUpsertParamsSchema>,
     ) => {
-      return executeVectorUpsert(params.id, params.text, params.metadata);
+      return executeVectorUpsert(
+        params.id,
+        params.text,
+        params.metadata,
+        params.doc_name,
+      );
     },
   };
 

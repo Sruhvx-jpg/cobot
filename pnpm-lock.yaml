@@ -46,8 +46,6 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
-  apps/chromadb-server: {}
-
   apps/desktop:
     dependencies:
       '@cobot/ts-shared':
@@ -97,6 +95,12 @@ importers:
   apps/sabha: {}
 
   apps/tracer-duty: {}
+
+  apps/vecs:
+    dependencies:
+      '@cobot/embedding-gemma-vecs':
+        specifier: workspace:*
+        version: link:../../packages/embedding-gemma-vecs
 
   packages/agent-core:
     dependencies:
@@ -198,7 +202,7 @@ importers:
 
   packages/chai-engine: {}
 
-  packages/chroma-engine: {}
+  packages/embedding-gemma-vecs: {}
 
   packages/sabha-db: {}
 
