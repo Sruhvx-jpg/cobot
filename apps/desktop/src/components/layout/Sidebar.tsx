@@ -2,27 +2,36 @@ import React from "react";
 import { Plus, PanelLeftClose } from "lucide-react";
 import { SessionItem } from "./SessionItem.js";
 import { ThemeSwitcher } from "../controls/ThemeSwitcher.js";
+import { useCobotStore } from "../../store/index.js";
 import type { Session } from "../../types/chat.js";
 
 interface SidebarProps {
-  isOpen: boolean;
-  onToggle: () => void;
-  sessions: Session[];
-  activeSessionId: string | null;
-  onSelectSession: (id: string) => void;
-  onNewSession: () => void;
-  onDeleteSession: (id: string) => void;
+  isOpen?: boolean;
+  onToggle?: () => void;
+  sessions?: Session[];
+  activeSessionId?: string | null;
+  onSelectSession?: (id: string) => void;
+  onNewSession?: () => void;
+  onDeleteSession?: (id: string) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({
-  isOpen,
-  onToggle,
-  sessions,
-  activeSessionId,
-  onSelectSession,
-  onNewSession,
-  onDeleteSession,
-}) => {
+export const Sidebar: React.FC<SidebarProps> = (props) => {
+  const storeIsOpen = useCobotStore((s) => s.isSidebarOpen);
+  const storeToggle = useCobotStore((s) => s.toggleSidebar);
+  const storeSessions = useCobotStore((s) => s.sessions);
+  const storeActiveId = useCobotStore((s) => s.activeSessionId);
+  const storeSelect = useCobotStore((s) => s.setActiveSessionId);
+  const storeNew = useCobotStore((s) => s.createSession);
+  const storeDelete = useCobotStore((s) => s.deleteSession);
+
+  const isOpen = props.isOpen !== undefined ? props.isOpen : storeIsOpen;
+  const onToggle = props.onToggle || storeToggle;
+  const sessions = props.sessions || storeSessions;
+  const activeSessionId =
+    props.activeSessionId !== undefined ? props.activeSessionId : storeActiveId;
+  const onSelectSession = props.onSelectSession || storeSelect;
+  const onNewSession = props.onNewSession || (() => storeNew());
+  const onDeleteSession = props.onDeleteSession || storeDelete;
   return (
     <aside
       className={`h-full bg-[var(--bg-main)] border-r border-[var(--border)] flex flex-col flex-shrink-0 transition-all duration-200 overflow-hidden ${

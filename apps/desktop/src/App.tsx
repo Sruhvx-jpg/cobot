@@ -1,147 +1,26 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect } from "react";
 import { Sidebar } from "./components/layout/Sidebar.js";
 import { Header } from "./components/layout/Header.js";
 import { ChatView } from "./components/chat/ChatView.js";
-import { useSessions } from "./hooks/useSessions.js";
-import { useAgentStream } from "./hooks/useAgentStream.js";
-import { useEndpoint } from "./context/EndpointContext.js";
-import type {
-  ModelOption,
-  AuthStatus,
-  AgentOption,
-  ThinkingLevel,
-} from "./types/chat.js";
+import { useCobotStore } from "./store/index.js";
 
 export const App: React.FC = () => {
-  const [agents, setAgents] = useState<AgentOption[]>([]);
-  const [currentAgent, setCurrentAgent] = useState<AgentOption | null>(null);
-  const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel>("medium");
-  const { apiUrl, endpoint } = useEndpoint();
-
-  const {
-    sessions,
-    activeSessionId,
-    activeSession,
-    setActiveSessionId,
-    createSession,
-    deleteSession,
-    updateSessionMessages,
-  } = useSessions(currentAgent?.id || "default");
-
-  const { isStreaming, sendMessage, steerActiveSession } = useAgentStream(
-    updateSessionMessages,
-  );
-
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [models, setModels] = useState<ModelOption[]>([]);
-  const [currentModel, setCurrentModel] = useState<ModelOption | null>(null);
-  const [authStatus, setAuthStatus] = useState<AuthStatus>({
-    authenticated: false,
-  });
-
-  const refreshAgents = useCallback(async () => {
-    try {
-      const res = await fetch(apiUrl("/api/agents"));
-      const data = await res.json();
-      if (data.agents && data.agents.length > 0) {
-        setAgents(data.agents);
-        setCurrentAgent((prev) => {
-          if (!prev) return data.agents[0];
-          const matched = data.agents.find(
-            (a: AgentOption) => a.id === prev.id,
-          );
-          return matched || data.agents[0];
-        });
-      }
-    } catch {
-      // Backend initializing
-    }
-  }, []);
-
-  const refreshAuthAndModels = useCallback(async () => {
-    try {
-      const [authRes, modelsRes] = await Promise.all([
-        fetch(apiUrl("/api/auth/status")),
-        fetch(apiUrl("/api/models")),
-      ]);
-      const authData = await authRes.json();
-      const modelsData = await modelsRes.json();
-
-      setAuthStatus(authData);
-      setModels(modelsData.models || []);
-
-      if (modelsData.models && modelsData.models.length > 0) {
-        setCurrentModel((prev) => prev || modelsData.models[0]);
-      } else {
-        setCurrentModel(null);
-      }
-    } catch {
-      // Backend initializing
-    }
-  }, []);
+  const refreshAuth = useCobotStore((s) => s.refreshAuth);
+  const refreshAgents = useCobotStore((s) => s.refreshAgents);
+  const refreshModels = useCobotStore((s) => s.refreshModels);
 
   useEffect(() => {
-    refreshAuthAndModels();
+    refreshAuth();
     refreshAgents();
-  }, [refreshAuthAndModels, refreshAgents]);
-
-  const handleSend = (text: string) => {
-    sendMessage(
-      text,
-      currentModel,
-      activeSession.id,
-      currentAgent?.id,
-      thinkingLevel,
-    );
-  };
-
-  const handleSteer = async (message: string) => {
-    updateSessionMessages(activeSession.id, (prev) => [
-      ...prev,
-      {
-        id: `msg_steer_${Date.now()}`,
-        role: "user",
-        content: `[Steered]: ${message}`,
-        timestamp: Date.now(),
-      },
-    ]);
-    await steerActiveSession(activeSession.id, message);
-  };
+    refreshModels();
+  }, [refreshAuth, refreshAgents, refreshModels]);
 
   return (
     <div className="flex w-screen h-screen overflow-hidden bg-[var(--bg-main)] text-[var(--text-main)] select-none">
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onToggle={() => setIsSidebarOpen((prev) => !prev)}
-        sessions={sessions}
-        activeSessionId={activeSessionId}
-        onSelectSession={setActiveSessionId}
-        onNewSession={() => createSession(currentAgent?.id || "default")}
-        onDeleteSession={deleteSession}
-      />
+      <Sidebar />
       <div className="flex-1 h-full flex flex-col bg-[var(--bg-main)] overflow-hidden">
-        <Header
-          isSidebarOpen={isSidebarOpen}
-          onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
-          authStatus={authStatus}
-          onRefreshAuth={refreshAuthAndModels}
-          agents={agents}
-          currentAgent={currentAgent}
-          onSelectAgent={setCurrentAgent}
-          onRefreshAgents={refreshAgents}
-          onInstructAgent={handleSend}
-        />
-        <ChatView
-          messages={activeSession.messages}
-          isStreaming={isStreaming}
-          models={models}
-          currentModel={currentModel}
-          onModelChange={setCurrentModel}
-          thinkingLevel={thinkingLevel}
-          onThinkingLevelChange={setThinkingLevel}
-          onSend={handleSend}
-          onSteer={handleSteer}
-        />
+        <Header />
+        <ChatView />
       </div>
     </div>
   );
