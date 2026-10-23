@@ -45,26 +45,25 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
       const data = await res.json();
       if (data.authUrl) {
         setAuthUrl(data.authUrl);
-        try {
-          window.open(data.authUrl, "_blank");
-        } catch {
-          // WebKitGTK restricted popup fallback
-        }
 
-        // Poll for completion
+        // Poll for completion (backend automatically opens system browser via xdg-open)
         const interval = setInterval(async () => {
-          const statusRes = await fetch(statusUrl);
-          const statusData = await statusRes.json();
-          if (statusData.authenticated) {
-            clearInterval(interval);
-            setLoading(false);
-            setAuthUrl(null);
+          try {
+            const statusRes = await fetch(statusUrl);
+            const statusData = await statusRes.json();
+            if (statusData.authenticated) {
+              clearInterval(interval);
+              setLoading(false);
+              setAuthUrl(null);
 
-            // If connected to remote VM, sync the credentials directly to the VM
-            if (isRemote && statusData.credentials) {
-              await syncCredentialsToRemote(statusData.credentials);
+              // If connected to remote VM, sync the credentials directly to the VM
+              if (isRemote && statusData.credentials) {
+                await syncCredentialsToRemote(statusData.credentials);
+              }
+              onRefreshAuth();
             }
-            onRefreshAuth();
+          } catch {
+            // Keep polling while auth is in progress
           }
         }, 1500);
       }
