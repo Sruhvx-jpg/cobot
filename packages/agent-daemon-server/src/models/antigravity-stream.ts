@@ -253,8 +253,9 @@ export function streamAntigravity(
       let currentText = "";
       let thinkingContentIndex = -1;
       let currentThinking = "";
+      let isStreamComplete = false;
 
-      while (true) {
+      while (!isStreamComplete) {
         const { done, value } = await reader.read();
         if (done) break;
 
@@ -266,7 +267,10 @@ export function streamAntigravity(
           const trimmed = line.trim();
           if (!trimmed.startsWith("data: ")) continue;
           const jsonStr = trimmed.slice(6);
-          if (jsonStr === "[DONE]") continue;
+          if (jsonStr === "[DONE]") {
+            isStreamComplete = true;
+            break;
+          }
 
           try {
             const data = JSON.parse(jsonStr);
@@ -380,16 +384,23 @@ export function streamAntigravity(
             }
 
             if (candidate.finishReason) {
+              const reason = candidate.finishReason.toLowerCase();
               finalMessage.stopReason =
-                candidate.finishReason.toLowerCase() === "stop"
+                reason === "stop"
                   ? "stop"
-                  : "stop";
+                  : reason === "max_tokens"
+                    ? "length"
+                    : "stop";
+              isStreamComplete = true;
+              break;
             }
           } catch {
             // Ignore parse errors on keepalive
           }
         }
       }
+
+      await reader.cancel().catch(() => {});
 
       if (textContentIndex !== -1) {
         stream.push({

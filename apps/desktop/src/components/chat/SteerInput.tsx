@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Compass, Check } from "lucide-react";
+import { Compass, Check, Square } from "lucide-react";
+import { useCobotStore } from "../../store/index.js";
 
 interface SteerInputProps {
   onSteer: (message: string) => Promise<void>;
@@ -12,6 +13,7 @@ export const SteerInput: React.FC<SteerInputProps> = ({
 }) => {
   const [text, setText] = useState("");
   const [steeredFeedback, setSteeredFeedback] = useState(false);
+  const stopStreaming = useCobotStore((s) => s.stopStreaming);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +55,16 @@ export const SteerInput: React.FC<SteerInputProps> = ({
         ) : (
           <span>STEER</span>
         )}
+      </button>
+
+      <button
+        type="button"
+        onClick={stopStreaming}
+        className="flex items-center gap-1 px-2.5 py-1.5 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 rounded-lg text-xs font-semibold text-red-400 transition-colors cursor-pointer"
+        title="Stop current agent run"
+      >
+        <Square size={12} className="fill-red-400" />
+        <span>STOP</span>
       </button>
     </form>
   );
