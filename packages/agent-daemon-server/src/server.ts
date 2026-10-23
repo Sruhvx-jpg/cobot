@@ -221,11 +221,9 @@ export async function createDaemonServer(
           await writeFile(tunnelRuntimePath, JSON.stringify(payload, null, 2));
           return res.json(payload);
         } catch (err) {
-          return res
-            .status(500)
-            .json({
-              error: `Instabox port publish failed: ${(err as Error).message}`,
-            });
+          return res.status(500).json({
+            error: `Instabox port publish failed: ${(err as Error).message}`,
+          });
         }
       }
 
@@ -317,9 +315,14 @@ export async function createDaemonServer(
       const boxName = target.replace(/^instabox:/, "").trim();
 
       if (target.startsWith("instabox:") || !target.includes("@")) {
-        command = `tar --exclude='runtime/*' -czf - -C "${cobotHome}" . | instabox exec ${boxName} -- bash -c "mkdir -p /data/home/.cobot && tar xzf - -C /data/home/.cobot"`;
+        await execAsync(`instabox wake ${boxName}`).catch(() => {});
+        await execAsync(
+          `instabox exec ${boxName} -- mkdir -p /data/home/.cobot`,
+        );
+        command = `tar --exclude='runtime/*' -czf - -C "${cobotHome}" . | instabox ssh ${boxName} -- "tar xzf - -C /data/home/.cobot"`;
       } else {
-        command = `tar --exclude='runtime/*' -czf - -C "${cobotHome}" . | ssh -C ${target} "mkdir -p ~/.cobot && tar xzf - -C ~/.cobot"`;
+        await execAsync(`ssh ${target} "mkdir -p ~/.cobot"`);
+        command = `tar --exclude='runtime/*' -czf - -C "${cobotHome}" . | ssh -C ${target} "tar xzf - -C ~/.cobot"`;
       }
 
       await execAsync(command, { timeout: 60000 });
