@@ -2336,6 +2336,7 @@ version = "0.1.0"
 dependencies = [
  "actix-web",
  "embedding-gemma-vecs",
+ "serde_json",
  "tokio",
  "tracing",
  "tracing-appender",
