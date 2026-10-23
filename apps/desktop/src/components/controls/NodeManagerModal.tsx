@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Server,
   Info,
@@ -144,13 +145,16 @@ ${
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div
         className={`w-full bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ease-in-out ${
-          isExpanded
-            ? "max-w-4xl min-h-[75vh] max-h-[90vh]"
-            : "max-w-lg max-h-[85vh]"
+          isExpanded ? "max-w-4xl h-[75vh]" : "max-w-lg h-auto"
         }`}
       >
         {/* Header Bar */}
@@ -382,6 +386,7 @@ ${
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
