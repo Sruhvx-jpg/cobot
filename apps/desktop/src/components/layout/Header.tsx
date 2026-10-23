@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { PanelLeftOpen, Server, QrCode } from "lucide-react";
+import { PanelLeftOpen, Server, QrCode, Info } from "lucide-react";
 import { AuthButton } from "../controls/AuthButton.js";
 import { AgentSwitcher } from "../controls/AgentSwitcher.js";
 import { NodeManagerModal } from "../controls/NodeManagerModal.js";
@@ -46,22 +46,19 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      {/* Top-Right action controls: Node Manager + Agent Switcher + Auth */}
+      {/* Top-Right action controls: Seed VM + Mobile QR + Agent Switcher + Auth */}
       <div className="flex items-center gap-2">
         <button
           onClick={() => setIsNodeModalOpen(true)}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-colors cursor-pointer ${
-            isRemote
-              ? "bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
-              : "bg-[var(--bg-surface)] border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-hover)]"
-          }`}
-          title={`Active Node: ${endpoint}`}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] text-[var(--text-main)] hover:border-orange-500/50 hover:bg-[var(--bg-hover)] transition-colors cursor-pointer group"
+          title="Your agent will seed the agent daemon and its ecosystem to your preferred VM."
         >
-          <Server
-            size={14}
-            className={isRemote ? "text-purple-400" : "text-emerald-400"}
+          <Server size={14} className="text-orange-400" />
+          <span>Seed to VM</span>
+          <Info
+            size={12}
+            className="text-[var(--text-muted)] group-hover:text-orange-400 transition-colors ml-0.5"
           />
-          <span>{isRemote ? "Remote Node" : "Local Node"}</span>
         </button>
 
         <button

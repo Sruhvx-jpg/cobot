@@ -326,10 +326,22 @@ export async function createDaemonServer(
       }
 
       await execAsync(command, { timeout: 60000 });
+
+      if (req.body.purgeLocal) {
+        await execAsync(
+          `rm -rf "${cobotHome}/vaults" "${cobotHome}/sessions" "${cobotHome}/vault.json"`,
+        ).catch(() => {});
+      }
+
       res.json({
         ok: true,
         target: boxName,
-        message: `Ecosystem and credentials successfully seeded to ${boxName}`,
+        message: `Agent ecosystem successfully seeded to ${boxName}. ${
+          req.body.purgeLocal
+            ? "Local daemon state purged."
+            : "Local daemon preserved for diagnostics & crash analysis."
+        }`,
+        purgedLocal: !!req.body.purgeLocal,
       });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
