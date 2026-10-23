@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useEndpoint } from "../context/EndpointContext.js";
 import type { ChatMessage, ModelOption, ThinkingLevel } from "../types/chat.js";
 
 export function useAgentStream(
@@ -9,6 +10,7 @@ export function useAgentStream(
 ) {
   const [isStreaming, setIsStreaming] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const { apiUrl } = useEndpoint();
 
   const sendMessage = async (
     prompt: string,
@@ -46,7 +48,7 @@ export function useAgentStream(
     abortControllerRef.current = controller;
 
     try {
-      const response = await fetch("http://localhost:3000/api/agent/stream", {
+      const response = await fetch(apiUrl("/api/agent/stream"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -231,7 +233,7 @@ export function useAgentStream(
 
   const steerActiveSession = async (sessionId: string, message: string) => {
     try {
-      await fetch("http://localhost:3000/api/agent/steer", {
+      await fetch(apiUrl("/api/agent/steer"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, message }),

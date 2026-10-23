@@ -4,6 +4,7 @@ import { Header } from "./components/layout/Header.js";
 import { ChatView } from "./components/chat/ChatView.js";
 import { useSessions } from "./hooks/useSessions.js";
 import { useAgentStream } from "./hooks/useAgentStream.js";
+import { useEndpoint } from "./context/EndpointContext.js";
 import type {
   ModelOption,
   AuthStatus,
@@ -15,6 +16,7 @@ export const App: React.FC = () => {
   const [agents, setAgents] = useState<AgentOption[]>([]);
   const [currentAgent, setCurrentAgent] = useState<AgentOption | null>(null);
   const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel>("medium");
+  const { apiUrl, endpoint } = useEndpoint();
 
   const {
     sessions,
@@ -39,7 +41,7 @@ export const App: React.FC = () => {
 
   const refreshAgents = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:3000/api/agents");
+      const res = await fetch(apiUrl("/api/agents"));
       const data = await res.json();
       if (data.agents && data.agents.length > 0) {
         setAgents(data.agents);
@@ -59,8 +61,8 @@ export const App: React.FC = () => {
   const refreshAuthAndModels = useCallback(async () => {
     try {
       const [authRes, modelsRes] = await Promise.all([
-        fetch("http://localhost:3000/api/auth/status"),
-        fetch("http://localhost:3000/api/models"),
+        fetch(apiUrl("/api/auth/status")),
+        fetch(apiUrl("/api/models")),
       ]);
       const authData = await authRes.json();
       const modelsData = await modelsRes.json();

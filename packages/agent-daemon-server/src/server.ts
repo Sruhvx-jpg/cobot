@@ -7,6 +7,7 @@ import {
   getStoredAuth,
   clearAuth,
 } from "./auth/antigravity.js";
+import { CredentialVault } from "./auth/vault.js";
 import { getAvailableModels } from "./models/catalog.js";
 import type { AgentRunRequest, AgentManifest } from "@cobot/ts-shared";
 
@@ -80,6 +81,7 @@ export async function createDaemonServer(
         authenticated: true,
         email: auth.email,
         provider: "antigravity",
+        credentials: auth,
       });
     } else {
       res.json({ authenticated: false });
@@ -103,6 +105,36 @@ export async function createDaemonServer(
   app.post("/api/auth/logout", async (_req, res) => {
     await clearAuth();
     res.json({ ok: true });
+  });
+
+  /** Sync / Push credentials directly from Desktop into VM Vault */
+  app.post("/api/auth/sync", async (req, res) => {
+    try {
+      const payload = req.body.credentials || req.body;
+      const provider = req.body.provider || payload.provider || "antigravity";
+
+      if (!payload.access_token) {
+        return res
+          .status(400)
+          .json({ error: "Missing access_token in credentials payload" });
+      }
+
+      await CredentialVault.set(provider, {
+        provider,
+        email: payload.email,
+        access_token: payload.access_token,
+        refresh_token: payload.refresh_token,
+        expires_at: payload.expires_at || Date.now() + 3600 * 1000,
+        projectId: payload.projectId,
+      });
+
+      console.log(
+        `[Auth Sync] Credentials synced for ${provider} (${payload.email || "no-email"})`,
+      );
+      res.json({ ok: true, provider });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
   });
 
   /** Dynamic model catalog (No hardcoding) */

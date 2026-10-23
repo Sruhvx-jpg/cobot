@@ -9,6 +9,7 @@ import {
   ExternalLink,
   X,
 } from "lucide-react";
+import { useEndpoint } from "../../context/EndpointContext.js";
 import type { AuthStatus } from "../../types/chat.js";
 
 interface AuthButtonProps {
@@ -23,32 +24,37 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
   const [loading, setLoading] = useState(false);
   const [authUrl, setAuthUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const { apiUrl, isRemote, syncCredentialsToRemote } = useEndpoint();
 
   const handleLogin = async () => {
     try {
       setLoading(true);
-      const res = await fetch(
-        "http://localhost:3000/api/auth/antigravity/start",
-        {
-          method: "POST",
-        },
-      );
+      // If remote VM, desktop initiates login locally on 3000 then pushes creds to VM
+      const authOrigin = isRemote ? "http://localhost:3000" : apiUrl("");
+      const startUrl = `${authOrigin}/api/auth/antigravity/start`;
+      const statusUrl = `${authOrigin}/api/auth/status`;
+
+      const res = await fetch(startUrl, {
+        method: "POST",
+      });
       const data = await res.json();
       if (data.authUrl) {
         setAuthUrl(data.authUrl);
-        // Fallback window.open
         window.open(data.authUrl, "_blank");
 
         // Poll for completion
         const interval = setInterval(async () => {
-          const statusRes = await fetch(
-            "http://localhost:3000/api/auth/status",
-          );
+          const statusRes = await fetch(statusUrl);
           const statusData = await statusRes.json();
           if (statusData.authenticated) {
             clearInterval(interval);
             setLoading(false);
             setAuthUrl(null);
+
+            // If connected to remote VM, sync the credentials directly to the VM
+            if (isRemote && statusData.credentials) {
+              await syncCredentialsToRemote(statusData.credentials);
+            }
             onRefreshAuth();
           }
         }, 1500);
@@ -74,7 +80,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
 
   const handleLogout = async () => {
     try {
-      await fetch("http://localhost:3000/api/auth/logout", { method: "POST" });
+      await fetch(apiUrl("/api/auth/logout"), { method: "POST" });
       onRefreshAuth();
     } catch (err) {
       console.error("Logout failed:", err);

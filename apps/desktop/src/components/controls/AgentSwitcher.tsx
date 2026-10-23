@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Bot, ChevronDown, Check, Plus, X, Sparkles } from "lucide-react";
+import { useEndpoint } from "../../context/EndpointContext.js";
 import type { AgentOption } from "../../types/chat.js";
 
 interface AgentSwitcherProps {
@@ -17,6 +18,7 @@ export const AgentSwitcher: React.FC<AgentSwitcherProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { apiUrl } = useEndpoint();
 
   // New Agent Form State
   const [newName, setNewName] = useState("");
@@ -62,7 +64,7 @@ export const AgentSwitcher: React.FC<AgentSwitcherProps> = ({
 
     setIsSubmitting(true);
     try {
-      const res = await fetch("http://localhost:3000/api/agents", {
+      const res = await fetch(apiUrl("/api/agents"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

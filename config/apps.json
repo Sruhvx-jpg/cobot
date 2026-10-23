@@ -1,0 +1,35 @@
+{
+  "ecosystem": "cobot",
+  "apps": {
+    "cobot.desktop": {
+      "name": "Desktop Client",
+      "path": "apps/desktop",
+      "tag_prefix": "desktop@",
+      "type": "frontend"
+    },
+    "cobot.agent-daemon": {
+      "name": "Agent Daemon",
+      "path": "apps/agent-daemon",
+      "tag_prefix": "agent-daemon@",
+      "type": "service"
+    },
+    "cobot.vecs": {
+      "name": "VecS Vector Store",
+      "path": "apps/vecs",
+      "tag_prefix": "vecs@",
+      "type": "service"
+    },
+    "cobot.sabha": {
+      "name": "Sabha Coordination Server",
+      "path": "apps/sabha",
+      "tag_prefix": "sabha@",
+      "type": "service"
+    },
+    "cobot.tracer-duty": {
+      "name": "Tracer Duty Telemetry",
+      "path": "apps/tracer-duty",
+      "tag_prefix": "tracer-duty@",
+      "type": "service"
+    }
+  }
+}
