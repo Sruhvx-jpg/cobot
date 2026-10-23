@@ -129,6 +129,7 @@ export const App: React.FC = () => {
           currentAgent={currentAgent}
           onSelectAgent={setCurrentAgent}
           onRefreshAgents={refreshAgents}
+          onInstructAgent={handleSend}
         />
         <ChatView
           messages={activeSession.messages}

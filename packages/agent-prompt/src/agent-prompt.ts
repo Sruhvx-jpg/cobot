@@ -126,6 +126,24 @@ HOW TO DELEGATE & COMMUNICATE WITH OTHER AGENTS:
 Do NOT attempt to run bash commands, find files, or curl ports to coordinate with agents. Use Sabha tools directly.
 </multi_agent_network>`;
 
+const BASE_SEEDING_GUIDANCE = `<self_seeding_and_deployment>
+When instructed to seed yourself and the Cobot ecosystem to an Instabox sandbox or remote VM:
+1. Identify the target (e.g. Instabox sandbox name like 'cobots' or SSH host).
+2. If using Instabox:
+   - Run 'instabox wake <box>' to ensure the sandbox is awake.
+   - Run 'instabox exec <box> -- mkdir -p /data/home/.cobot' to prepare destination.
+   - Stream the local ecosystem cleanly using:
+     tar --exclude='runtime/*' -czf - -C ~/.cobot . | instabox ssh <box> -- "tar xzf - -C /data/home/.cobot"
+   - Verify the deployment: 'instabox exec <box> -- ls -la /data/home/.cobot'
+3. If using standard SSH:
+   - Run: ssh <target> "mkdir -p ~/.cobot"
+   - Run: tar --exclude='runtime/*' -czf - -C ~/.cobot . | ssh -C <target> "tar xzf - -C ~/.cobot"
+   - Verify the deployment: ssh <target> "ls -la ~/.cobot"
+4. Present verified confirmation to the user.
+5. If the user opted to purge the local daemon, run: rm -rf ~/.cobot/vaults ~/.cobot/sessions ~/.cobot/vault.json.
+   Otherwise, keep the local daemon state intact for crash analysis and diagnostics.
+</self_seeding_and_deployment>`;
+
 export function buildAgentPrompt(extension: PromptExtension): string {
   const cwd = extension.cwd || process.cwd();
   const normalizedCwd = cwd.replace(/\\/g, "/");
@@ -202,7 +220,9 @@ ${dogmasSection}
 
 ${rulesSection}
 
-${BASE_SABHA_GUIDANCE}${customBlocks}${projectContextSection}
+${BASE_SABHA_GUIDANCE}
+
+${BASE_SEEDING_GUIDANCE}${customBlocks}${projectContextSection}
 
 <cwd>
 ${normalizedCwd}

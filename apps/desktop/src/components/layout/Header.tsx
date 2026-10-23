@@ -16,6 +16,7 @@ interface HeaderProps {
   currentAgent: AgentOption | null;
   onSelectAgent: (agent: AgentOption) => void;
   onRefreshAgents: () => Promise<void>;
+  onInstructAgent?: (prompt: string) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -27,6 +28,7 @@ export const Header: React.FC<HeaderProps> = ({
   currentAgent,
   onSelectAgent,
   onRefreshAgents,
+  onInstructAgent,
 }) => {
   const [isNodeModalOpen, setIsNodeModalOpen] = useState(false);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
@@ -82,6 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
           isOpen={isNodeModalOpen}
           onClose={() => setIsNodeModalOpen(false)}
           authStatus={authStatus}
+          onInstructAgent={onInstructAgent}
         />
         <MobilePairingModal
           isOpen={isQrModalOpen}

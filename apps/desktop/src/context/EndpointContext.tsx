@@ -28,7 +28,15 @@ export const EndpointProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [endpoint, setEndpointState] = useState<string>(() => {
-    return localStorage.getItem("cobot_endpoint") || DEFAULT_ENDPOINT;
+    const saved = localStorage.getItem("cobot_endpoint");
+    if (
+      saved &&
+      (saved.startsWith("http://localhost") ||
+        saved.startsWith("http://127.0.0.1"))
+    ) {
+      return saved;
+    }
+    return DEFAULT_ENDPOINT;
   });
 
   const isRemote = endpoint !== DEFAULT_ENDPOINT;
