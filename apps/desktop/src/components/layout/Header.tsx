@@ -84,6 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
         <NodeManagerModal
           isOpen={isNodeModalOpen}
           onClose={() => setIsNodeModalOpen(false)}
+          authStatus={authStatus}
         />
         <MobilePairingModal
           isOpen={isQrModalOpen}

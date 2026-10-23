@@ -13,6 +13,8 @@ import {
   Smartphone,
   Sparkles,
   ArrowRight,
+  ShieldCheck,
+  ShieldAlert,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useEndpoint } from "../../context/EndpointContext.js";
@@ -21,21 +23,39 @@ import {
   type AppReleaseInfo,
 } from "../../services/updater.js";
 
+interface InstaboxSandbox {
+  name: string;
+  state: string;
+  template?: string;
+  created?: string;
+}
+
 interface NodeManagerModalProps {
   isOpen: boolean;
   onClose: () => void;
+  authStatus?: { authenticated: boolean; email?: string };
 }
 
 export const NodeManagerModal: React.FC<NodeManagerModalProps> = ({
   isOpen,
   onClose,
+  authStatus,
 }) => {
   const { endpoint, setEndpoint, isRemote, apiUrl } = useEndpoint();
-  const [activeTab, setActiveTab] = useState<"tunnel" | "seed" | "updates">(
-    "tunnel",
-  );
+
+  // Instabox Sandboxes
+  const [boxes, setBoxes] = useState<InstaboxSandbox[]>([]);
+  const [selectedBox, setSelectedBox] = useState<string>("cobots");
+  const [boxesLoading, setBoxesLoading] = useState(false);
+
+  // Seeding
+  const [seedLoading, setSeedLoading] = useState(false);
+  const [seedStatus, setSeedStatus] = useState<string | null>(null);
 
   // Tunnel state
+  const [tunnelProvider, setTunnelProvider] = useState<
+    "instabox" | "cloudflare"
+  >("instabox");
   const [tunnelActive, setTunnelActive] = useState(false);
   const [tunnelUrl, setTunnelUrl] = useState<string | null>(null);
   const [tunnelToken, setTunnelToken] = useState<string | null>(null);
@@ -43,48 +63,55 @@ export const NodeManagerModal: React.FC<NodeManagerModalProps> = ({
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
 
-  // Seeding state
-  const [seedTarget, setSeedTarget] = useState("instabox:work");
-  const [seedLoading, setSeedLoading] = useState(false);
-  const [seedStatus, setSeedStatus] = useState<string | null>(null);
-
-  // Updates state
+  // Updates
   const [updates, setUpdates] = useState<AppReleaseInfo[]>([]);
   const [updatesLoading, setUpdatesLoading] = useState(false);
 
-  // Custom endpoint input
-  const [customEndpoint, setCustomEndpoint] = useState(endpoint);
+  const refreshData = async () => {
+    // 1. Fetch Instabox sandboxes
+    setBoxesLoading(true);
+    try {
+      const res = await fetch(apiUrl("/api/system/instabox/boxes"));
+      const data = await res.json();
+      if (Array.isArray(data.boxes) && data.boxes.length > 0) {
+        setBoxes(data.boxes);
+        setSelectedBox(data.boxes[0].name || "cobots");
+      }
+    } catch {
+      // Fallback
+    } finally {
+      setBoxesLoading(false);
+    }
 
-  useEffect(() => {
-    if (!isOpen) return;
+    // 2. Fetch current tunnel status
+    try {
+      const res = await fetch(apiUrl("/api/system/tunnel"));
+      const data = await res.json();
+      if (data.active && data.endpoint) {
+        setTunnelActive(true);
+        setTunnelUrl(data.endpoint);
+        setTunnelToken(data.token);
+        if (data.provider) setTunnelProvider(data.provider);
 
-    // Check tunnel status
-    fetch(apiUrl("/api/system/tunnel"))
-      .then((r) => r.json())
-      .then(async (data) => {
-        if (data.active && data.endpoint) {
-          setTunnelActive(true);
-          setTunnelUrl(data.endpoint);
-          setTunnelToken(data.token);
+        const payload = JSON.stringify({
+          endpoint: data.endpoint,
+          token: data.token,
+          name: "Cobot Cloud Node",
+        });
+        const qr = await QRCode.toDataURL(payload, {
+          width: 220,
+          margin: 1,
+          color: { dark: "#0f172a", light: "#ffffff" },
+        });
+        setQrCodeDataUrl(qr);
+      } else {
+        setTunnelActive(false);
+      }
+    } catch {
+      setTunnelActive(false);
+    }
 
-          const payload = JSON.stringify({
-            endpoint: data.endpoint,
-            token: data.token,
-            name: "Cobot Cloud VM",
-          });
-          const qr = await QRCode.toDataURL(payload, {
-            width: 200,
-            margin: 1,
-            color: { dark: "#000000", light: "#ffffff" },
-          });
-          setQrCodeDataUrl(qr);
-        } else {
-          setTunnelActive(false);
-        }
-      })
-      .catch(() => setTunnelActive(false));
-
-    // Fetch updates
+    // 3. Fetch app updates
     setUpdatesLoading(true);
     checkEcosystemUpdates({
       "cobot.desktop": "0.1.0",
@@ -96,13 +123,50 @@ export const NodeManagerModal: React.FC<NodeManagerModalProps> = ({
       setUpdates(res);
       setUpdatesLoading(false);
     });
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      refreshData();
+    }
   }, [isOpen, apiUrl]);
+
+  const handleSeed = async () => {
+    if (!selectedBox.trim()) return;
+    setSeedLoading(true);
+    setSeedStatus(null);
+
+    try {
+      const res = await fetch(apiUrl("/api/system/seed"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: selectedBox.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSeedStatus(
+          `✅ Ecosystem and credentials seeded to sandbox '${selectedBox}'`,
+        );
+      } else {
+        setSeedStatus(`❌ Seeding failed: ${data.error || "Unknown error"}`);
+      }
+    } catch (err) {
+      setSeedStatus(`❌ Error: ${(err as Error).message}`);
+    } finally {
+      setSeedLoading(false);
+    }
+  };
 
   const handleStartTunnel = async () => {
     setTunnelLoading(true);
     try {
       const res = await fetch(apiUrl("/api/system/tunnel/start"), {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: tunnelProvider,
+          boxName: selectedBox,
+        }),
       });
       const data = await res.json();
       if (data.active && data.endpoint) {
@@ -113,12 +177,12 @@ export const NodeManagerModal: React.FC<NodeManagerModalProps> = ({
         const payload = JSON.stringify({
           endpoint: data.endpoint,
           token: data.token,
-          name: "Cobot Cloud VM",
+          name: "Cobot Cloud Node",
         });
         const qr = await QRCode.toDataURL(payload, {
-          width: 200,
+          width: 220,
           margin: 1,
-          color: { dark: "#000000", light: "#ffffff" },
+          color: { dark: "#0f172a", light: "#ffffff" },
         });
         setQrCodeDataUrl(qr);
       }
@@ -144,56 +208,24 @@ export const NodeManagerModal: React.FC<NodeManagerModalProps> = ({
     }
   };
 
-  const handleSeed = async () => {
-    if (!seedTarget.trim()) return;
-    setSeedLoading(true);
-    setSeedStatus(null);
-
-    try {
-      const res = await fetch(apiUrl("/api/system/seed"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: seedTarget.trim() }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setSeedStatus("✅ Successfully seeded ecosystem to " + seedTarget);
-      } else {
-        setSeedStatus("❌ Seeding failed: " + (data.error || "Unknown error"));
-      }
-    } catch (err) {
-      setSeedStatus("❌ Seeding error: " + (err as Error).message);
-    } finally {
-      setSeedLoading(false);
-    }
-  };
-
-  const handleApplyEndpoint = (url: string) => {
-    setEndpoint(url);
-    setCustomEndpoint(url);
-  };
-
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl bg-[var(--bg-surface)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between">
-          <div className="flex items-center gap-2">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+      <div className="w-full max-w-2xl bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        {/* Modal Top Bar */}
+        <div className="px-6 py-4 border-b border-[var(--border)] flex items-center justify-between bg-[var(--bg-main)]">
+          <div className="flex items-center gap-2.5">
             <Server className="text-orange-500" size={20} />
-            <h2 className="font-semibold text-base text-[var(--text-main)]">
-              Node & Ecosystem Manager
-            </h2>
-            <span
-              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                isRemote
-                  ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
-                  : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-              }`}
-            >
-              {isRemote ? "Remote VM Active" : "Local Host Active"}
-            </span>
+            <div>
+              <h2 className="font-semibold text-sm text-[var(--text-main)]">
+                Cobot Node Launchpad & Ecosystem Seeder
+              </h2>
+              <p className="text-[11px] text-[var(--text-muted)]">
+                Linear workflow: Authenticate ➔ Seed Sandbox ➔ Zero-Domain
+                Tunnel ➔ Mobile QR
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -203,301 +235,292 @@ export const NodeManagerModal: React.FC<NodeManagerModalProps> = ({
           </button>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex border-b border-[var(--border)] bg-[var(--bg-main)] px-5 gap-6 text-sm">
-          <button
-            onClick={() => setActiveTab("tunnel")}
-            className={`py-3 font-medium border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
-              activeTab === "tunnel"
-                ? "border-orange-500 text-orange-400"
-                : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]"
-            }`}
-          >
-            <Radio size={16} />
-            Quick Tunnel & Mobile
-          </button>
-          <button
-            onClick={() => setActiveTab("seed")}
-            className={`py-3 font-medium border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
-              activeTab === "seed"
-                ? "border-orange-500 text-orange-400"
-                : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]"
-            }`}
-          >
-            <HardDrive size={16} />
-            Seed Remote Node
-          </button>
-          <button
-            onClick={() => setActiveTab("updates")}
-            className={`py-3 font-medium border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
-              activeTab === "updates"
-                ? "border-orange-500 text-orange-400"
-                : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]"
-            }`}
-          >
-            <Sparkles size={16} />
-            App-ID Updates
-          </button>
-        </div>
+        {/* Wizard Steps */}
+        <div className="p-6 overflow-y-auto space-y-6">
+          {/* STEP 1: AUTHENTICATION STATUS */}
+          <div className="p-4 bg-[var(--bg-main)] border border-[var(--border)] rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-orange-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center text-[10px]">
+                  1
+                </span>
+                Antigravity Auth (Host Desktop)
+              </span>
+              {authStatus?.authenticated ? (
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium flex items-center gap-1">
+                  <ShieldCheck size={12} /> Signed in as {authStatus.email}
+                </span>
+              ) : (
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium flex items-center gap-1">
+                  <ShieldAlert size={12} /> Not Signed In
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-[var(--text-muted)]">
+              {authStatus?.authenticated
+                ? "Your local Antigravity credentials are ready to be pushed to the remote VM sandbox."
+                : "Sign in using the LOGIN button in the header before seeding to carry authentication over."}
+            </p>
+          </div>
 
-        {/* Content Body */}
-        <div className="p-5 overflow-y-auto flex-1 space-y-5">
-          {activeTab === "tunnel" && (
-            <div className="space-y-4">
-              <div className="p-4 bg-[var(--bg-main)] border border-[var(--border)] rounded-lg">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h3 className="font-medium text-sm text-[var(--text-main)] flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse" />
-                      Cloudflare Zero-Domain Quick Tunnel
-                    </h3>
-                    <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                      3-Step zero-account HTTPS tunnel (trycloudflare.com)
-                    </p>
-                  </div>
-                  {tunnelActive ? (
-                    <button
-                      onClick={handleStopTunnel}
-                      disabled={tunnelLoading}
-                      className="px-3 py-1.5 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 rounded-lg text-xs font-medium transition-colors cursor-pointer"
-                    >
-                      Stop Tunnel
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleStartTunnel}
-                      disabled={tunnelLoading}
-                      className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
-                    >
-                      {tunnelLoading ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <Radio size={14} />
-                      )}
-                      Start Quick Tunnel
-                    </button>
-                  )}
-                </div>
+          {/* STEP 2: SELECT & SEED INSTABOX */}
+          <div className="p-4 bg-[var(--bg-main)] border border-[var(--border)] rounded-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-orange-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center text-[10px]">
+                  2
+                </span>
+                Target Instabox Sandbox
+              </span>
+              <button
+                onClick={refreshData}
+                className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center gap-1 cursor-pointer"
+              >
+                <RefreshCw
+                  size={11}
+                  className={boxesLoading ? "animate-spin" : ""}
+                />
+                Refresh Sandboxes
+              </button>
+            </div>
 
-                {tunnelActive && tunnelUrl && (
-                  <div className="mt-4 pt-4 border-t border-[var(--border)] space-y-3">
-                    <div>
-                      <label className="text-xs text-[var(--text-muted)] block mb-1">
-                        Live Public HTTPS Endpoint:
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <code className="text-xs bg-[var(--bg-surface)] px-2.5 py-1.5 rounded border border-[var(--border)] flex-1 text-orange-400 select-all overflow-x-auto">
-                          {tunnelUrl}
-                        </code>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(tunnelUrl);
-                            setCopiedUrl(true);
-                            setTimeout(() => setCopiedUrl(false), 2000);
-                          }}
-                          className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] rounded hover:bg-[var(--bg-hover)] cursor-pointer"
-                        >
-                          {copiedUrl ? (
-                            <Check size={16} className="text-emerald-400" />
-                          ) : (
-                            <Copy size={16} />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2 pt-2">
-                      <button
-                        onClick={() => handleApplyEndpoint(tunnelUrl)}
-                        className="px-3 py-1.5 bg-[var(--bg-surface)] border border-[var(--border)] hover:border-orange-500/50 rounded-lg text-xs font-medium text-[var(--text-main)] flex items-center gap-1.5 transition-colors cursor-pointer"
-                      >
-                        <ArrowRight size={14} className="text-orange-400" />
-                        Point Desktop App to Tunnel
-                      </button>
-                    </div>
-
-                    {/* QR Code Card */}
-                    {qrCodeDataUrl && (
-                      <div className="mt-4 p-4 bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg flex items-center gap-5">
-                        <img
-                          src={qrCodeDataUrl}
-                          alt="Mobile Pairing QR Code"
-                          className="w-36 h-36 rounded-md bg-white p-1"
-                        />
-                        <div className="space-y-1.5">
-                          <h4 className="font-medium text-sm text-[var(--text-main)] flex items-center gap-1.5">
-                            <Smartphone size={16} className="text-purple-400" />
-                            Scan with Cobot Mobile
-                          </h4>
-                          <p className="text-xs text-[var(--text-muted)]">
-                            Open the Tauri mobile app on iOS/Android, tap "Pair
-                            Box", and scan this QR code to connect securely
-                            without typing.
-                          </p>
-                          <div className="text-[10px] text-[var(--text-muted)] bg-[var(--bg-main)] p-2 rounded border border-[var(--border)] font-mono">
-                            Token: {tunnelToken?.slice(0, 16)}...
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Endpoint Override */}
-              <div className="p-4 bg-[var(--bg-main)] border border-[var(--border)] rounded-lg space-y-2">
-                <label className="text-xs font-medium text-[var(--text-main)] block">
-                  Active Desktop API Endpoint:
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <label className="text-[11px] text-[var(--text-muted)] block mb-1">
+                  Detected Sandboxes (via <code>instabox ls</code>):
                 </label>
-                <div className="flex items-center gap-2">
+                {boxes.length > 0 ? (
+                  <select
+                    value={selectedBox}
+                    onChange={(e) => setSelectedBox(e.target.value)}
+                    className="w-full text-xs bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text-main)] outline-none focus:border-orange-500 font-mono"
+                  >
+                    {boxes.map((b) => (
+                      <option key={b.name} value={b.name}>
+                        {b.name} ({b.state || "Active"}){" "}
+                        {b.template ? `· ${b.template}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
                   <input
                     type="text"
-                    value={customEndpoint}
-                    onChange={(e) => setCustomEndpoint(e.target.value)}
-                    placeholder="http://localhost:3000"
-                    className="flex-1 text-xs bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text-main)] outline-none focus:border-orange-500 font-mono"
+                    value={selectedBox}
+                    onChange={(e) => setSelectedBox(e.target.value)}
+                    placeholder="cobots"
+                    className="w-full text-xs bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text-main)] outline-none focus:border-orange-500 font-mono"
                   />
-                  <button
-                    onClick={() => handleApplyEndpoint(customEndpoint)}
-                    className="px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border)] hover:bg-[var(--bg-hover)] text-xs font-medium rounded-lg text-[var(--text-main)] transition-colors cursor-pointer"
-                  >
-                    Apply
-                  </button>
-                  <button
-                    onClick={() => handleApplyEndpoint("http://localhost:3000")}
-                    className="px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border)] hover:bg-[var(--bg-hover)] text-xs font-medium rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
-                  >
-                    Reset Local
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "seed" && (
-            <div className="space-y-4">
-              <div className="p-4 bg-[var(--bg-main)] border border-[var(--border)] rounded-lg space-y-3">
-                <h3 className="font-medium text-sm text-[var(--text-main)] flex items-center gap-2">
-                  <HardDrive size={16} className="text-orange-500" />
-                  Seed Ecosystem to Remote Node / Instabox
-                </h3>
-                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-                  Streams your local Cobot vault (agent manifests, Inode index,
-                  and Antigravity credentials) directly to the target VM over
-                  SSH or Instabox CLI into <code>/data/home/.cobot</code>.
-                </p>
-
-                <div className="space-y-2 pt-2">
-                  <label className="text-xs text-[var(--text-muted)] block">
-                    Target Node (e.g. <code>instabox:work</code> or{" "}
-                    <code>user@192.168.1.100</code>):
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={seedTarget}
-                      onChange={(e) => setSeedTarget(e.target.value)}
-                      placeholder="instabox:work"
-                      className="flex-1 text-xs bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text-main)] outline-none focus:border-orange-500 font-mono"
-                    />
-                    <button
-                      onClick={handleSeed}
-                      disabled={seedLoading}
-                      className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
-                    >
-                      {seedLoading ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <HardDrive size={14} />
-                      )}
-                      Seed to Node
-                    </button>
-                  </div>
-                </div>
-
-                {seedStatus && (
-                  <div className="p-3 bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg text-xs font-mono text-[var(--text-main)]">
-                    {seedStatus}
-                  </div>
                 )}
               </div>
-            </div>
-          )}
 
-          {activeTab === "updates" && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between pb-1">
-                <span className="text-xs text-[var(--text-muted)]">
-                  Modular updates by App ID from GitHub Releases:
-                </span>
+              <div className="pt-4">
                 <button
-                  onClick={() => {
-                    setUpdatesLoading(true);
-                    checkEcosystemUpdates({
-                      "cobot.desktop": "0.1.0",
-                      "cobot.agent-daemon": "0.1.0",
-                      "cobot.vecs": "0.1.0",
-                      "cobot.sabha": "0.0.0-unstable",
-                      "cobot.tracer-duty": "0.1.0",
-                    }).then((res) => {
-                      setUpdates(res);
-                      setUpdatesLoading(false);
-                    });
-                  }}
-                  className="p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] rounded cursor-pointer"
+                  onClick={handleSeed}
+                  disabled={seedLoading}
+                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
                 >
-                  <RefreshCw
-                    size={14}
-                    className={updatesLoading ? "animate-spin" : ""}
-                  />
+                  {seedLoading ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <HardDrive size={13} />
+                  )}
+                  Seed Ecosystem to Box
                 </button>
               </div>
+            </div>
 
+            {seedStatus && (
+              <div className="p-2.5 bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg text-xs font-mono text-[var(--text-main)]">
+                {seedStatus}
+              </div>
+            )}
+          </div>
+
+          {/* STEP 3: ZERO-DOMAIN EDGE TUNNEL */}
+          <div className="p-4 bg-[var(--bg-main)] border border-[var(--border)] rounded-xl space-y-3">
+            <span className="text-xs font-semibold text-orange-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="w-5 h-5 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center text-[10px]">
+                3
+              </span>
+              Zero-Domain Edge Tunnel
+            </span>
+
+            <div className="flex gap-4 text-xs">
+              <label className="flex items-center gap-2 cursor-pointer text-[var(--text-main)]">
+                <input
+                  type="radio"
+                  name="tunnel_provider"
+                  value="instabox"
+                  checked={tunnelProvider === "instabox"}
+                  onChange={() => setTunnelProvider("instabox")}
+                  className="accent-orange-500"
+                />
+                <span>
+                  Instabox Native Edge (<code>*.instabox.tech</code>)
+                </span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-[var(--text-main)]">
+                <input
+                  type="radio"
+                  name="tunnel_provider"
+                  value="cloudflare"
+                  checked={tunnelProvider === "cloudflare"}
+                  onChange={() => setTunnelProvider("cloudflare")}
+                  className="accent-orange-500"
+                />
+                <span>
+                  Cloudflare Quick Tunnel (<code>*.trycloudflare.com</code>)
+                </span>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <div className="text-xs text-[var(--text-muted)]">
+                {tunnelActive ? (
+                  <span className="text-emerald-400 font-medium flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Tunnel Live: {tunnelUrl}
+                  </span>
+                ) : (
+                  "Starts an encrypted outbound edge tunnel without purchasing any domain."
+                )}
+              </div>
+
+              {tunnelActive ? (
+                <button
+                  onClick={handleStopTunnel}
+                  disabled={tunnelLoading}
+                  className="px-3 py-1.5 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 rounded-lg text-xs font-medium cursor-pointer"
+                >
+                  Stop Tunnel
+                </button>
+              ) : (
+                <button
+                  onClick={handleStartTunnel}
+                  disabled={tunnelLoading}
+                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  {tunnelLoading ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <Radio size={13} />
+                  )}
+                  Activate Tunnel
+                </button>
+              )}
+            </div>
+
+            {tunnelActive && tunnelUrl && (
+              <div className="pt-2 flex gap-2">
+                <button
+                  onClick={() => setEndpoint(tunnelUrl)}
+                  className="px-3 py-1.5 bg-[var(--bg-surface)] border border-[var(--border)] hover:border-orange-500/50 rounded-lg text-xs font-medium text-[var(--text-main)] flex items-center gap-1.5 cursor-pointer"
+                >
+                  <ArrowRight size={13} className="text-orange-400" />
+                  Switch Desktop to Chat through this Node
+                </button>
+                <button
+                  onClick={() => setEndpoint("http://localhost:3000")}
+                  className="px-3 py-1.5 bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-main)] rounded-lg text-xs font-medium cursor-pointer"
+                >
+                  Reset Local (3000)
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* STEP 4: MOBILE PAIRING QR CODE */}
+          {tunnelActive && qrCodeDataUrl && (
+            <div className="p-4 bg-[var(--bg-main)] border border-[var(--border)] rounded-xl flex items-center gap-6">
+              <img
+                src={qrCodeDataUrl}
+                alt="Mobile Pairing QR Code"
+                className="w-40 h-40 rounded-xl bg-white p-2 flex-shrink-0"
+              />
               <div className="space-y-2">
-                {updates.map((app) => (
-                  <div
-                    key={app.appId}
-                    className="p-3 bg-[var(--bg-main)] border border-[var(--border)] rounded-lg flex items-center justify-between"
+                <span className="text-xs font-semibold text-orange-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center text-[10px]">
+                    4
+                  </span>
+                  Mobile Pairing QR Code
+                </span>
+                <p className="text-xs text-[var(--text-main)] font-medium">
+                  Scan this QR code with the Cobot Mobile App
+                </p>
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  The mobile app configures the secure tunnel endpoint and
+                  pairing token in 3 seconds.
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <code className="text-[11px] bg-[var(--bg-surface)] px-2 py-1 rounded border border-[var(--border)] text-[var(--text-muted)] truncate max-w-xs font-mono select-all">
+                    {tunnelUrl}
+                  </code>
+                  <button
+                    onClick={() => {
+                      if (tunnelUrl) {
+                        navigator.clipboard.writeText(tunnelUrl);
+                        setCopiedUrl(true);
+                        setTimeout(() => setCopiedUrl(false), 2000);
+                      }
+                    }}
+                    className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-main)] rounded hover:bg-[var(--bg-surface)] cursor-pointer"
                   >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-xs text-[var(--text-main)]">
-                          {app.name}
-                        </span>
-                        <code className="text-[10px] text-[var(--text-muted)] bg-[var(--bg-surface)] px-1.5 py-0.5 rounded">
-                          {app.appId}
-                        </code>
-                      </div>
-                      <div className="text-[11px] text-[var(--text-muted)] mt-1">
-                        Current: <code>v{app.currentVersion}</code>{" "}
-                        {app.latestVersion && (
-                          <>
-                            · Latest: <code>v{app.latestVersion}</code>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {app.hasUpdate ? (
-                      <a
-                        href={app.releaseUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-2.5 py-1 bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 rounded text-xs font-medium flex items-center gap-1 transition-colors"
-                      >
-                        Update to v{app.latestVersion}
-                        <ExternalLink size={12} />
-                      </a>
+                    {copiedUrl ? (
+                      <Check size={14} className="text-emerald-400" />
                     ) : (
-                      <span className="text-[11px] text-emerald-400 flex items-center gap-1">
-                        <Check size={12} /> Up to date
-                      </span>
+                      <Copy size={14} />
                     )}
-                  </div>
-                ))}
+                  </button>
+                </div>
               </div>
             </div>
           )}
+
+          {/* STEP 5: APP-ID UPDATER TRACKER */}
+          <div className="p-4 bg-[var(--bg-main)] border border-[var(--border)] rounded-xl space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-orange-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles size={13} />
+                App-ID Releases (Granular Git Tracking)
+              </span>
+              <span className="text-[10px] text-[var(--text-muted)]">
+                Updates only changed binaries
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {updates.map((app) => (
+                <div
+                  key={app.appId}
+                  className="p-2.5 bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg flex items-center justify-between"
+                >
+                  <div className="overflow-hidden">
+                    <div className="font-medium text-xs text-[var(--text-main)] truncate">
+                      {app.name}
+                    </div>
+                    <code className="text-[10px] text-[var(--text-muted)] font-mono">
+                      v{app.currentVersion}
+                    </code>
+                  </div>
+                  {app.hasUpdate ? (
+                    <a
+                      href={app.releaseUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2 py-0.5 bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded text-[11px] font-medium flex items-center gap-1"
+                    >
+                      Update
+                      <ExternalLink size={10} />
+                    </a>
+                  ) : (
+                    <span className="text-[10px] text-emerald-400 flex items-center gap-0.5">
+                      <Check size={11} /> OK
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

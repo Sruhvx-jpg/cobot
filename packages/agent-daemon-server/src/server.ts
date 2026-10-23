@@ -2,8 +2,9 @@ import express, { type Express } from "express";
 import cors from "cors";
 import { spawn, exec } from "node:child_process";
 import { promisify } from "node:util";
-import { readFile, unlink } from "node:fs/promises";
+import { readFile, writeFile, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { randomBytes } from "node:crypto";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { AGUITransport } from "./ag-ui.js";
@@ -162,6 +163,17 @@ export async function createDaemonServer(
   const execAsync = promisify(exec);
   const tunnelRuntimePath = join(homedir(), ".cobot", "runtime", "tunnel.json");
 
+  /** List available Instabox sandboxes */
+  app.get("/api/system/instabox/boxes", async (_req, res) => {
+    try {
+      const { stdout } = await execAsync("instabox ls --json");
+      const boxes = JSON.parse(stdout);
+      res.json({ boxes: Array.isArray(boxes) ? boxes : [] });
+    } catch (err) {
+      res.json({ boxes: [], error: (err as Error).message });
+    }
+  });
+
   app.get("/api/system/tunnel", async (_req, res) => {
     try {
       if (existsSync(tunnelRuntimePath)) {
@@ -176,41 +188,95 @@ export async function createDaemonServer(
 
   let activeTunnelProc: any = null;
 
-  app.post("/api/system/tunnel/start", async (_req, res) => {
+  app.post("/api/system/tunnel/start", async (req, res) => {
     try {
-      if (activeTunnelProc && existsSync(tunnelRuntimePath)) {
-        const raw = await readFile(tunnelRuntimePath, "utf-8");
-        return res.json({ active: true, ...JSON.parse(raw) });
+      const { provider = "instabox", boxName = "cobots" } = req.body || {};
+
+      if (existsSync(tunnelRuntimePath)) {
+        try {
+          const raw = await readFile(tunnelRuntimePath, "utf-8");
+          const existing = JSON.parse(raw);
+          if (existing.active && existing.endpoint) {
+            return res.json({ active: true, ...existing });
+          }
+        } catch {}
       }
 
-      const scriptPath = join(process.cwd(), "scripts", "tunnel-pair.sh");
-      const resolvedScript = existsSync(scriptPath)
-        ? scriptPath
-        : join(
-            homedir(),
-            "Documents",
-            "programming",
-            "cobot",
-            "scripts",
-            "tunnel-pair.sh",
+      const token = `cobot_pair_${randomBytes(6).toString("hex")}`;
+
+      if (provider === "instabox") {
+        try {
+          const { stdout } = await execAsync(
+            `instabox port publish ${boxName} ${port} --json`,
           );
-
-      activeTunnelProc = spawn("bash", [resolvedScript], {
-        env: { ...process.env, PORT: port.toString() },
-        detached: true,
-        stdio: "ignore",
-      });
-      activeTunnelProc.unref();
-
-      for (let i = 0; i < 30; i++) {
-        await new Promise((r) => setTimeout(r, 500));
-        if (existsSync(tunnelRuntimePath)) {
-          const raw = await readFile(tunnelRuntimePath, "utf-8");
-          return res.json({ active: true, ...JSON.parse(raw) });
+          const portData = JSON.parse(stdout);
+          const payload = {
+            active: true,
+            provider: "instabox",
+            boxName,
+            endpoint: portData.url,
+            token,
+            createdAt: Date.now(),
+          };
+          await writeFile(tunnelRuntimePath, JSON.stringify(payload, null, 2));
+          return res.json(payload);
+        } catch (err) {
+          return res
+            .status(500)
+            .json({
+              error: `Instabox port publish failed: ${(err as Error).message}`,
+            });
         }
       }
 
-      res.status(504).json({ error: "Tunnel startup timed out" });
+      // Cloudflare Quick Tunnel provider (trycloudflare.com)
+      const cloudflaredBin = existsSync(
+        join(homedir(), ".local", "bin", "cloudflared"),
+      )
+        ? join(homedir(), ".local", "bin", "cloudflared")
+        : "cloudflared";
+
+      activeTunnelProc = spawn(
+        cloudflaredBin,
+        ["tunnel", "--url", `http://localhost:${port}`],
+        {
+          detached: true,
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      );
+      activeTunnelProc.unref();
+
+      let capturedUrl = "";
+      let capturedPid = activeTunnelProc.pid;
+
+      const checkUrl = (data: Buffer) => {
+        const text = data.toString();
+        const match = text.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
+        if (match && !capturedUrl) {
+          capturedUrl = match[0];
+        }
+      };
+
+      activeTunnelProc.stdout?.on("data", checkUrl);
+      activeTunnelProc.stderr?.on("data", checkUrl);
+
+      for (let i = 0; i < 40; i++) {
+        await new Promise((r) => setTimeout(r, 400));
+        if (capturedUrl) {
+          const payload = {
+            active: true,
+            provider: "cloudflare",
+            endpoint: capturedUrl,
+            token,
+            pid: capturedPid,
+            createdAt: Date.now(),
+          };
+          await writeFile(tunnelRuntimePath, JSON.stringify(payload, null, 2));
+          return res.json(payload);
+        }
+      }
+
+      res.status(504).json({ error: "Cloudflare Quick Tunnel timed out" });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
     }
@@ -222,7 +288,11 @@ export async function createDaemonServer(
         try {
           const raw = await readFile(tunnelRuntimePath, "utf-8");
           const data = JSON.parse(raw);
-          if (data.pid) {
+          if (data.provider === "instabox" && data.boxName) {
+            await execAsync(
+              `instabox port unpublish ${data.boxName} ${port}`,
+            ).catch(() => {});
+          } else if (data.pid) {
             process.kill(data.pid, "SIGTERM");
           }
         } catch {}
@@ -244,19 +314,19 @@ export async function createDaemonServer(
     try {
       const cobotHome = process.env.COBOT_HOME || join(homedir(), ".cobot");
       let command = "";
+      const boxName = target.replace(/^instabox:/, "").trim();
 
-      if (target.startsWith("instabox:")) {
-        const boxName = target.replace(/^instabox:/, "").trim();
-        command = `tar czf - -C "${cobotHome}" . | instabox exec ${boxName} -- bash -c "mkdir -p /data/home/.cobot && tar xzf - -C /data/home/.cobot"`;
+      if (target.startsWith("instabox:") || !target.includes("@")) {
+        command = `tar --exclude='runtime/*' -czf - -C "${cobotHome}" . | instabox exec ${boxName} -- bash -c "mkdir -p /data/home/.cobot && tar xzf - -C /data/home/.cobot"`;
       } else {
-        command = `tar czf - -C "${cobotHome}" . | ssh -C ${target} "mkdir -p ~/.cobot && tar xzf - -C ~/.cobot"`;
+        command = `tar --exclude='runtime/*' -czf - -C "${cobotHome}" . | ssh -C ${target} "mkdir -p ~/.cobot && tar xzf - -C ~/.cobot"`;
       }
 
       await execAsync(command, { timeout: 60000 });
       res.json({
         ok: true,
-        target,
-        message: "Ecosystem successfully seeded to target node",
+        target: boxName,
+        message: `Ecosystem and credentials successfully seeded to ${boxName}`,
       });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
